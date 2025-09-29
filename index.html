@@ -1,54 +1,486 @@
-// loadVoices fonksiyonunda aşağıdaki değişikliği yapın
-function loadVoices() {
-    voices = synth.getVoices();
-    
-    // Türkçe ses bulunamadığında bile Türkçe telaffuz için optimize et
-    selectedVoice = voices.find(voice => 
-        voice.lang === 'tr-TR' || 
-        voice.lang === 'tr' || 
-        voice.name.toLowerCase().includes('turkish') ||
-        voice.name.toLowerCase().includes('türk')
-    );
-    
-    // Varsayılan ses
-    if (!selectedVoice) {
-        selectedVoice = voices.find(voice => voice.default) || voices[0];
-        console.warn('Türkçe ses bulunamadı, varsayılan ses kullanılıyor.');
-        
-        // Varsayılan sesi Türkçe telaffuz için optimize et
-        if (selectedVoice) {
-            console.log('Varsayılan ses Türkçe telaffuz için optimize ediliyor...');
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PubMed Makaleleri Podcast Oynatıcısı</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
         }
-    }
+        .player-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        button {
+            background-color: #336699;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #264d73;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .title-display {
+            background-color: #eef7ff;
+            border: 1px solid #c7e1ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+        }
+        .progress {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #666;
+        }
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+        input[type="range"] {
+            width: 80px;
+        }
+        .status {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        .pubmed-link {
+            margin: 5px 0 15px 0;
+            font-size: 14px;
+        }
+        .pubmed-link a {
+            color: #336699;
+            text-decoration: none;
+        }
+        .pubmed-link a:hover {
+            text-decoration: underline;
+        }
+        .voice-info {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+        
+        @media (max-width: 600px) {
+            .controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .volume-control {
+                margin-left: 0;
+                margin-top: 10px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <h2>PubMed Makaleleri Podcast</h2>
+        <div class="title-display" id="currentTitle">
+            Makale başlıklarını Türkçe dinlemek için oynat düğmesine tıklayın
+        </div>
+        <div class="pubmed-link" id="pubmedLink"></div>
+        <div id="loadingMessage">Veriler yükleniyor...</div>
+        <div class="controls">
+            <button id="playButton" disabled>▶️ Oynat</button>
+            <button id="pauseButton" disabled>⏸️ Duraklat</button>
+            <button id="stopButton" disabled>⏹️ Durdur</button>
+            <button id="prevButton" disabled>⏮️ Önceki</button>
+            <button id="nextButton" disabled>⏭️ Sonraki</button>
+            <div class="volume-control">
+                <label for="volumeControl">Ses Seviyesi:</label>
+                <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="1">
+            </div>
+        </div>
+        <div class="progress">
+            <span id="currentIndex">0</span>/<span id="totalTitles">0</span> makale
+        </div>
+        <div class="status" id="status"></div>
+    </div>
     
-    // Ses bulunduysa logla
-    if (selectedVoice) {
-        console.log('Seçilen ses:', selectedVoice.name, selectedVoice.lang);
-    }
-}
+    <script>
+        // Google Sheets bilgileri
+        const SHEET_ID = '148p3M41R52gVVjtLSF2Qh8rJvBPEWJ7SV4lgSBQYwLc';
+        
+        // Makale başlıkları ve PMID değerleri
+        let articleTitles = [];
+        let articlePMIDs = [];
+        
+        // SpeechSynthesis instance
+        const synth = window.speechSynthesis;
+        let utterance = null;
+        let currentTitleIndex = 0;
+        let isPaused = false;
+        let voices = [];
+        let selectedVoice = null;
+        
+        // DOM elements
+        const playButton = document.getElementById('playButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const stopButton = document.getElementById('stopButton');
+        const prevButton = document.getElementById('prevButton');
+        const nextButton = document.getElementById('nextButton');
+        const currentTitle = document.getElementById('currentTitle');
+        const currentIndex = document.getElementById('currentIndex');
+        const totalTitles = document.getElementById('totalTitles');
+        const volumeControl = document.getElementById('volumeControl');
+        const status = document.getElementById('status');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const pubmedLink = document.getElementById('pubmedLink');
 
-// createUtterance fonksiyonunda bu değişiklikleri yapın
-function createUtterance(text) {
-    utterance = new SpeechSynthesisUtterance(text);
-    
-    // Seçilen sesi ayarla
-    if (selectedVoice) {
-        utterance.voice = selectedVoice;
-    }
-    
-    // Türkçe telaffuz için optimize et (daha iyi Türkçe aksanı için)
-    utterance.lang = 'tr-TR'; // Dili zorla Türkçe yap
-    utterance.pitch = 1.0;    // Normal ton
-    utterance.rate = 0.85;    // Biraz daha yavaş konuşma hızı (0.9 yerine 0.85)
-    
-    // Varsayılan ses kullanıldığında bazı Türkçe karakterlerin telaffuzunu iyileştir
-    if (!selectedVoice || selectedVoice.lang.substring(0,2) !== 'tr') {
-        // Daha yavaş konuşarak anlaşılırlığı artır
-        utterance.rate = 0.8;
-    }
-    
-    // Ses seviyesi
-    utterance.volume = parseFloat(volumeControl.value);
-    
-    // ...diğer kodlar...
-}
+        // Google Sheets'ten verileri al
+        async function fetchSheetData() {
+            try {
+                loadingMessage.textContent = "Google Sheets'ten veriler yükleniyor...";
+                
+                // JSONP formatında verileri al
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=translate&gid=1844098177`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error('Google Sheets verisi alınamadı');
+                }
+                
+                const responseText = await response.text();
+                
+                // JSONP yanıtını JSON'a dönüştürme
+                const jsonText = responseText.substring(
+                    responseText.indexOf('(') + 1, 
+                    responseText.lastIndexOf(')')
+                );
+                
+                try {
+                    const data = JSON.parse(jsonText);
+                    
+                    if (data.table && data.table.rows) {
+                        console.log("Bulunan satır sayısı:", data.table.rows.length);
+                        
+                        // Debug için ilk 5 satırı göster
+                        console.log("İlk 5 satır:", data.table.rows.slice(0, 5));
+                        
+                        // Geçici diziler
+                        const titles = [];
+                        const pmids = [];
+                        
+                        // Her satır için veri al
+                        data.table.rows.forEach((row, index) => {
+                            if (row.c) {
+                                // A sütunu (başlık)
+                                const title = row.c[0] && row.c[0].v ? row.c[0].v.toString().trim() : "";
+                                
+                                // F sütunu (PMID) için indeks 5 kullanılmalı (A=0, B=1, ..., F=5)
+                                const pmid = row.c[5] && row.c[5].v ? row.c[5].v.toString().trim() : "";
+                                
+                                // Dergi başlıklarını filtrele
+                                const isDergiAdi = title.includes('📘') || 
+                                                 title.includes('[resmi sayfa]') || 
+                                                 title.length < 10 ||
+                                                 /Journal|Pathology|Archiv|APMIS|Histopathology/i.test(title);
+                                
+                                // Sadece makale başlıklarını al
+                                if (title && !isDergiAdi) {
+                                    titles.push(title);
+                                    pmids.push(pmid);
+                                    console.log(`Satır ${index+1}: Başlık="${title}", PMID=${pmid}`);
+                                }
+                            }
+                        });
+                        
+                        console.log("İşlenen başlık sayısı:", titles.length);
+                        
+                        if (titles.length > 0) {
+                            // Makale başlık ve PMID'lerini kaydet
+                            articleTitles = titles;
+                            articlePMIDs = pmids;
+                            
+                            // UI'ı güncelle
+                            totalTitles.textContent = articleTitles.length;
+                            loadingMessage.style.display = 'none';
+                            enablePlayerControls();
+                        } else {
+                            throw new Error('İşlenebilir başlık bulunamadı');
+                        }
+                    } else {
+                        throw new Error('Tablo verileri alınamadı');
+                    }
+                } catch (jsonError) {
+                    console.error('JSON ayrıştırma hatası:', jsonError);
+                    console.log('Alınan JSON yanıtı:', jsonText);
+                    throw new Error('Veri formatı okunamadı');
+                }
+            } catch (error) {
+                console.error('Veri alma hatası:', error);
+                loadingMessage.textContent = 'Google Sheets verileri yüklenemedi - Demo başlıklar kullanılıyor';
+                
+                // Varsayılan başlıklara geç
+                useDemoTitles();
+            }
+        }
+        
+        // Demo başlık ve PMID'ler - hata durumunda gösterilecek
+        function useDemoTitles() {
+            articleTitles = [
+                "Yapay Zeka destekli görüntü analizi, küçük hücreli olmayan akciğer kanserinde standartlaştırılmış programlanmış ölüm-ligand 1 ekspresyonu değerlendirmesi için.",
+                "Bifazik (skuamoid) papiller böbrek hücreli karsinom: PRCC spektrumu içinde belirgin bir moleküler ve morfolojik alt tip.",
+                "RPL22 Ekspresyonunun Kaybı, Tümörle İlişkili Lenfosit Sayılarının Daha Düşük Olduğu MLH1 Eksik Endometriyal Kanserlerin Transkripsiyonel Bir Alt Kümesini Belirler.",
+                "Histopatolojik İçgörüler Curvularia-İndüklenen Kronik Granülomatöz Fungal Sinüzit: Cerrahi Patologlar İçin Bir Rehber.",
+                "ALK-Yeniden Düzenlenmiş Mezenkimal Neoplazm Hiyalin-Vasküler Castleman Hastalığı Benzeri Özelliklerle: Bir Olgu Sunumu."
+            ];
+            
+            articlePMIDs = [
+                "41013460",
+                "41006900",
+                "41005533",
+                "41005534",
+                "41001954"
+            ];
+            
+            totalTitles.textContent = articleTitles.length;
+            loadingMessage.style.display = 'none';
+            enablePlayerControls();
+        }
+
+        // Enable player controls once data is loaded
+        function enablePlayerControls() {
+            playButton.disabled = false;
+            prevButton.disabled = true; // Initially disabled
+            nextButton.disabled = articleTitles.length <= 1;
+            status.textContent = "Hazır";
+        }
+
+        // Initialize the UI and load data
+        function init() {
+            // Try to fetch data from Google Sheets
+            fetchSheetData();
+            
+            // Load available voices
+            loadVoices();
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = loadVoices;
+            }
+
+            // Set up event listeners
+            playButton.addEventListener('click', play);
+            pauseButton.addEventListener('click', pause);
+            stopButton.addEventListener('click', stop);
+            prevButton.addEventListener('click', previous);
+            nextButton.addEventListener('click', next);
+            volumeControl.addEventListener('input', updateVolume);
+        }
+
+        // Load available voices and select Turkish
+        function loadVoices() {
+            voices = synth.getVoices();
+            
+            // Türkçe ses bul
+            selectedVoice = voices.find(voice => 
+                voice.lang === 'tr-TR' || 
+                voice.lang === 'tr' || 
+                voice.name.toLowerCase().includes('turkish') ||
+                voice.name.toLowerCase().includes('türk')
+            );
+            
+            // Türkçe ses bulunamadığında bile Türkçe telaffuz için optimize et
+            if (!selectedVoice) {
+                // Varsayılan ses
+                selectedVoice = voices.find(voice => voice.default) || voices[0];
+                console.log('Türkçe ses bulunamadı, varsayılan ses kullanılıyor.');
+                
+                // Kullanıcıya bilgi ver
+                const infoElement = document.createElement('div');
+                infoElement.className = 'voice-info';
+                infoElement.textContent = 'Not: Tarayıcınızda Türkçe ses bulunamadı. Telaffuz optimize edilmiştir.';
+                
+                // Mevcut voice-info elementi varsa kaldır
+                const existingInfo = document.querySelector('.voice-info');
+                if (existingInfo) {
+                    existingInfo.remove();
+                }
+                
+                // Oynatıcının üstüne ekle
+                document.querySelector('.player-container').insertBefore(
+                    infoElement, 
+                    document.querySelector('.title-display')
+                );
+            }
+            
+            if (selectedVoice) {
+                console.log('Seçilen ses:', selectedVoice.name, selectedVoice.lang);
+            }
+        }
+
+        // Create a new speech utterance
+        function createUtterance(text) {
+            utterance = new SpeechSynthesisUtterance(text);
+            
+            // Seçilen sesi ayarla
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
+            
+            // Türkçe telaffuz için optimize et (daha iyi Türkçe aksanı için)
+            utterance.lang = 'tr-TR'; // Dili zorla Türkçe yap
+            utterance.pitch = 1.0;    // Normal ton
+            utterance.rate = 0.85;    // Biraz daha yavaş konuşma hızı
+            
+            // Varsayılan ses kullanıldığında bazı Türkçe karakterlerin telaffuzunu iyileştir
+            if (!selectedVoice || selectedVoice.lang.substring(0,2) !== 'tr') {
+                // Daha yavaş konuşarak anlaşılırlığı artır
+                utterance.rate = 0.8;
+            }
+            
+            // Ses seviyesi
+            utterance.volume = parseFloat(volumeControl.value);
+            
+            // Handle when speech ends
+            utterance.onend = () => {
+                if (!isPaused) {
+                    // Move to the next title
+                    if (currentTitleIndex < articleTitles.length - 1) {
+                        currentTitleIndex++;
+                        speakCurrentTitle();
+                    } else {
+                        // End of playlist
+                        resetPlayer();
+                        status.textContent = "Makalelerin sonuna ulaşıldı";
+                    }
+                }
+            };
+
+            utterance.onerror = (event) => {
+                console.error('SpeechSynthesis hatası:', event);
+                status.textContent = "Konuşma sırasında bir hata oluştu";
+            };
+        }
+
+        // Speak the current title
+        function speakCurrentTitle() {
+            updateDisplay();
+            
+            const title = articleTitles[currentTitleIndex];
+            createUtterance(title);
+            synth.speak(utterance);
+            
+            status.textContent = "Konuşuyor...";
+            updateButtonState(true);
+        }
+
+        // Update the display
+        function updateDisplay() {
+            // Başlığı göster
+            currentTitle.textContent = articleTitles[currentTitleIndex];
+            
+            // PMID varsa PubMed linkini göster
+            const pmid = articlePMIDs[currentTitleIndex];
+            
+            if (pmid && pmid.trim() !== "") {
+                pubmedLink.innerHTML = `<a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}" target="_blank">PubMed: ${pmid}</a>`;
+            } else {
+                pubmedLink.innerHTML = "";
+            }
+            
+            // İndeksi güncelle
+            currentIndex.textContent = currentTitleIndex + 1;
+        }
+
+        // Update button states
+        function updateButtonState(isPlaying) {
+            playButton.disabled = isPlaying;
+            pauseButton.disabled = !isPlaying;
+            stopButton.disabled = !isPlaying;
+            prevButton.disabled = currentTitleIndex === 0 || isPlaying;
+            nextButton.disabled = currentTitleIndex >= articleTitles.length - 1 || isPlaying;
+        }
+
+        // Reset the player
+        function resetPlayer() {
+            synth.cancel();
+            isPaused = false;
+            updateButtonState(false);
+            status.textContent = "Hazır";
+        }
+
+        // Event handlers
+        function play() {
+            if (synth.speaking && isPaused) {
+                // Resume if paused
+                synth.resume();
+                isPaused = false;
+                status.textContent = "Konuşuyor...";
+            } else {
+                // Start new speech
+                speakCurrentTitle();
+            }
+            updateButtonState(true);
+        }
+
+        function pause() {
+            if (synth.speaking) {
+                synth.pause();
+                isPaused = true;
+                status.textContent = "Duraklatıldı";
+            }
+        }
+
+        function stop() {
+            resetPlayer();
+        }
+
+        function previous() {
+            if (currentTitleIndex > 0) {
+                currentTitleIndex--;
+                updateDisplay();
+            }
+        }
+
+        function next() {
+            if (currentTitleIndex < articleTitles.length - 1) {
+                currentTitleIndex++;
+                updateDisplay();
+            }
+        }
+
+        function updateVolume() {
+            if (utterance) {
+                utterance.volume = parseFloat(volumeControl.value);
+            }
+        }
+
+        // Initialize when the page loads
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
