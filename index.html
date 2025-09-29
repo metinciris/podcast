@@ -7,132 +7,281 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
       margin: 0;
-      padding: 20px;
+      padding: 0;
       color: #333;
-      max-width: 900px;
-      margin-left: auto;
-      margin-right: auto;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
     }
 
     h1 {
       text-align: center;
-      color: #336699;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      font-size: 2.2em;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .content-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      margin-bottom: 25px;
+      border: 1px solid #e1e5e9;
+      min-height: 200px;
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .player-container {
+      position: sticky;
+      top: 0;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      margin-bottom: 25px;
+      z-index: 100;
+      border: 1px solid #e1e5e9;
+    }
+
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f1f3f4;
+    }
+
+    .player-title {
+      font-size: 1.4em;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    .current-track {
+      font-size: 0.9em;
+      color: #7f8c8d;
+      font-style: italic;
+    }
+
+    #playerControls {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 90px;
+      font-weight: 600;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      background: linear-gradient(135deg, #2980b9 0%, #2471a3 100%);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    #status {
+      text-align: center;
+      font-style: italic;
+      color: #7f8c8d;
+      min-height: 20px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 0.9em;
+    }
+
+    .articles-section {
+      margin-top: 20px;
+    }
+
+    .articles-title {
+      font-size: 1.3em;
+      color: #2c3e50;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #3498db;
     }
 
     #articles {
-      margin-top: 20px;
       list-style: none;
       padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
     }
 
     #articles li {
       background-color: white;
-      border-radius: 8px;
-      margin-bottom: 10px;
+      border-radius: 10px;
       padding: 15px;
       cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      transition: background-color 0.3s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      border-left: 4px solid transparent;
+      height: 100%;
     }
 
     #articles li:hover {
-      background-color: #eef7ff;
+      background-color: #f8f9fa;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-left: 4px solid #3498db;
     }
 
     #articles li.active {
-      background-color: #d0e4ff;
+      background-color: #e3f2fd;
       font-weight: bold;
+      border-left: 4px solid #e74c3c;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
-    #detail {
-      background-color: white;
-      border-radius: 8px;
-      padding: 15px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      min-height: 90px;
-      margin-top: 15px;
-      font-size: 16px;
+    .article-title {
+      font-size: 14px;
       line-height: 1.4;
+      margin: 0;
     }
 
-    #playerControls {
-      margin-top: 20px;
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      flex-wrap: wrap;
+    @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+      
+      h1 {
+        font-size: 1.8em;
+      }
+      
+      .content-panel {
+        padding: 20px;
+        font-size: 16px;
+      }
+      
+      .player-container {
+        padding: 15px;
+      }
+      
+      button {
+        padding: 10px 15px;
+        font-size: 13px;
+        min-width: 80px;
+      }
+      
+      #playerControls {
+        gap: 5px;
+      }
+      
+      #articles {
+        grid-template-columns: 1fr;
+      }
     }
 
-    button {
-      background-color: #336699;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-      min-width: 90px;
-    }
-
-    button:disabled {
-      background-color: #cccccc;
-      cursor: not-allowed;
-    }
-
-    button:hover:not(:disabled) {
-      background-color: #264d73;
-    }
-
-    #status {
-      margin-top: 10px;
-      text-align: center;
-      font-style: italic;
-      color: #555;
-      min-height: 20px;
+    @media (max-width: 480px) {
+      .player-header {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+      }
+      
+      button {
+        padding: 8px 12px;
+        min-width: 70px;
+      }
+      
+      .content-panel {
+        padding: 15px;
+        font-size: 15px;
+      }
     }
   </style>
 </head>
 
 <body>
-  <h1>Prof. Dr. Metin Çiriş - Podcast Makaleler</h1>
-
-  <ul id="articles"></ul>
-
-  <div id="detail">Bir makale seçin veya oynat düğmesine basın.</div>
-
-  <div id="playerControls">
-    <button id="prevBtn" disabled>⏮️ Önceki</button>
-    <button id="playBtn" disabled>▶️ Oynat</button>
-    <button id="pauseBtn" disabled>⏸️ Duraklat</button>
-    <button id="stopBtn" disabled>⏹️ Durdur</button>
-    <button id="nextBtn" disabled>⏭️ Sonraki</button>
+  <div class="container">
+    <h1>Prof. Dr. Metin Çiriş - Podcast Makaleler</h1>
+    
+    <!-- Büyük İçerik Paneli - E Sütunu Burada Gösterilecek -->
+    <div class="content-panel" id="contentPanel">
+      Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.
+    </div>
+    
+    <!-- Oynatıcı -->
+    <div class="player-container">
+      <div class="player-header">
+        <div class="player-title">Sesli Oynatıcı</div>
+        <div class="current-track" id="currentTrack">Seçili makale yok</div>
+      </div>
+      
+      <div id="playerControls">
+        <button id="prevBtn" disabled>⏮️ Önceki</button>
+        <button id="playBtn" disabled>▶️ Oynat</button>
+        <button id="pauseBtn" disabled>⏸️ Duraklat</button>
+        <button id="stopBtn" disabled>⏹️ Durdur</button>
+        <button id="nextBtn" disabled>⏭️ Sonraki</button>
+      </div>
+      
+      <div id="status">Bir makale seçin ve oynat'a basın</div>
+    </div>
+    
+    <!-- Makale Listesi -->
+    <div class="articles-section">
+      <div class="articles-title">Makaleler (A Sütunu - Sesli Okunacak)</div>
+      <ul id="articles"></ul>
+    </div>
   </div>
-
-  <div id="status"></div>
 
   <script>
     const SHEET_ID = '148p3M41R52gVVjtLSF2Qh8rJvBPEWJ7SV4lgSBQYwLc';
-    const GID = '1109640564'; // Veri sayfası Google Sheets baki
-    // A sütunu (Türkçe başlıklar) ve E sütunu (detay) çekilecek
+    const GID = '1109640564';
 
-    let articles = []; // { title, detail }
+    let articles = [];
     let currentIndex = -1;
     let synth = window.speechSynthesis;
     let utterance = null;
     let isPaused = false;
 
     const articlesEl = document.getElementById('articles');
-    const detailEl = document.getElementById('detail');
+    const contentPanelEl = document.getElementById('contentPanel');
     const statusEl = document.getElementById('status');
     const prevBtn = document.getElementById('prevBtn');
     const playBtn = document.getElementById('playBtn');
     const pauseBtn = document.getElementById('pauseBtn');
     const stopBtn = document.getElementById('stopBtn');
     const nextBtn = document.getElementById('nextBtn');
+    const currentTrackEl = document.getElementById('currentTrack');
 
     // Sesli okutma ayarları
     let voices = [];
@@ -156,8 +305,7 @@
     }
     loadVoices();
 
-    // Google Sheets'ten A ve E sütunlarını aynı satırlarda çekmek için
-    // Gviz API ile JSONP veri çekme ve JSON parse
+    // Google Sheets'ten veri çekme
     async function fetchArticles() {
       const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&range=A1:E132`;
       try {
@@ -169,19 +317,18 @@
         if (!data.table || !data.table.rows) throw new Error('Tablo verisi alınamadı');
 
         articles = data.table.rows.map(row => {
-          // Satırdaki hücreler A=0, E=4 indexinde olabilir
-          // Kontrollü alma
           let title = row.c[0] && row.c[0].v ? row.c[0].v.toString().trim() : '';
           let detail = row.c[4] && row.c[4].v ? row.c[4].v.toString().trim() : '';
           return { title, detail };
-        }).filter(a => a.title.length > 5); // Kısa ve boşları at
+        }).filter(a => a.title.length > 5);
 
         renderArticleList();
         enableControls();
-        statusEl.textContent = 'Makale verileri yüklendi.';
+        statusEl.textContent = `${articles.length} makale yüklendi.`;
       } catch (e) {
         console.error(e);
         statusEl.textContent = 'Makale verileri yüklenemedi.';
+        contentPanelEl.innerHTML = '<p style="color: #e74c3c;">Makale verileri yüklenemedi. Lütfen internet bağlantınızı kontrol edin.</p>';
       }
     }
 
@@ -189,7 +336,7 @@
       articlesEl.innerHTML = '';
       articles.forEach((article, idx) => {
         const li = document.createElement('li');
-        li.textContent = article.title;
+        li.innerHTML = `<div class="article-title">${article.title}</div>`;
         li.addEventListener('click', () => {
           playArticle(idx);
         });
@@ -210,9 +357,14 @@
         li.classList.toggle('active', idx === currentIndex);
       });
       if (currentIndex >= 0 && currentIndex < articles.length) {
-        detailEl.innerHTML = articles[currentIndex].detail || 'Açıklama yok.';
+        // E sütunu içeriğini büyük panelde göster
+        contentPanelEl.innerHTML = articles[currentIndex].detail || '<p style="color: #7f8c8d; font-style: italic;">Bu makale için detaylı içerik bulunmuyor.</p>';
+        
+        // A sütunu başlığını oynatıcıda göster
+        currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${articles[currentIndex].title.substring(0, 50)}${articles[currentIndex].title.length > 50 ? '...' : ''}`;
       } else {
-        detailEl.textContent = 'Bir makale seçin veya oynat düğmesine basın.';
+        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.';
+        currentTrackEl.textContent = 'Seçili makale yok';
       }
       prevBtn.disabled = currentIndex <= 0;
       nextBtn.disabled = currentIndex >= articles.length - 1;
@@ -234,7 +386,9 @@
         stopBtn.disabled = true;
         playBtn.disabled = false;
         isPaused = false;
-        // Otomatik sonraki varsa çal
+        pauseBtn.textContent = '⏸️ Duraklat';
+        
+        // Otomatik sonraki
         if (currentIndex < articles.length - 1) {
           currentIndex++;
           playArticle(currentIndex);
@@ -255,6 +409,7 @@
       if (idx < 0 || idx >= articles.length) return;
       currentIndex = idx;
       updateSelection();
+      // SADECE A sütununu (başlık) oku, E sütununu okuma
       speak(articles[idx].title);
     }
 
