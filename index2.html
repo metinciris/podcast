@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>PubMed Makaleler - Prof. Dr. Metin Çiriş</title>
+  <title>Günlük Patoloji Makaleleri - Sesli Podcast</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * {
@@ -27,90 +27,77 @@
 
     header {
       text-align: center;
-      margin-bottom: 40px;
-      padding: 30px 20px;
+      margin-bottom: 30px;
+      padding: 25px 20px;
       background: white;
       border-radius: 20px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     }
 
     h1 {
-      font-size: 2.8em;
+      font-size: 2.5em;
       font-weight: 800;
       color: #2c3e50;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .subtitle {
-      font-size: 1.1em;
+      font-size: 1em;
       color: #7f8c8d;
       font-weight: 400;
+    }
+
+    .date-badge {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 6px 16px;
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+      border-radius: 20px;
+      font-size: 0.9em;
+      font-weight: 600;
     }
 
     .player-container {
       position: sticky;
       top: 20px;
       background: white;
-      border-radius: 20px;
-      padding: 30px;
+      border-radius: 16px;
+      padding: 20px 30px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
       margin-bottom: 30px;
       z-index: 100;
       border: 1px solid #e1e8ed;
-    }
-
-    .player-header {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #ecf0f1;
+      gap: 20px;
+      flex-wrap: wrap;
     }
 
-    .player-title {
-      font-size: 1.6em;
-      font-weight: 700;
-      color: #2c3e50;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .current-track {
-      font-size: 0.9em;
-      color: #7f8c8d;
-      font-style: italic;
-      background: #f8f9fa;
-      padding: 8px 16px;
-      border-radius: 10px;
-    }
-
-    #playerControls {
+    .player-controls {
       display: flex;
       gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
+      align-items: center;
     }
 
     button {
       background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
       color: white;
       border: none;
-      border-radius: 12px;
-      padding: 14px 24px;
+      border-radius: 10px;
+      padding: 12px 20px;
       font-size: 14px;
       cursor: pointer;
       transition: all 0.3s ease;
-      min-width: 110px;
+      min-width: 100px;
       font-weight: 600;
-      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+      box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
     }
 
     button:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
     }
 
     button:active:not(:disabled) {
@@ -126,17 +113,10 @@
     }
 
     #status {
-      text-align: center;
+      font-size: 1.8em;
       color: #7f8c8d;
-      min-height: 24px;
-      padding: 12px;
-      background: #f8f9fa;
-      border-radius: 10px;
-      font-size: 0.95em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      min-width: 30px;
+      text-align: center;
     }
 
     .articles-section {
@@ -260,20 +240,58 @@
       transform: scale(1.05);
     }
 
+    footer {
+      margin-top: 50px;
+      padding: 30px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      text-align: center;
+      color: #7f8c8d;
+      font-size: 0.95em;
+      line-height: 1.8;
+    }
+
+    footer h3 {
+      color: #2c3e50;
+      font-size: 1.2em;
+      margin-bottom: 15px;
+      font-weight: 700;
+    }
+
+    footer p {
+      margin-bottom: 10px;
+    }
+
+    .journal-list {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #ecf0f1;
+      color: #95a5a6;
+      font-size: 0.9em;
+    }
+
     @media (max-width: 768px) {
       h1 {
         font-size: 2em;
       }
       
       .player-container {
-        padding: 20px;
+        padding: 15px 20px;
         top: 10px;
+        flex-direction: column;
+        gap: 15px;
+      }
+      
+      .player-controls {
+        width: 100%;
+        justify-content: center;
       }
       
       button {
-        padding: 12px 18px;
+        padding: 10px 16px;
         font-size: 13px;
-        min-width: 95px;
+        min-width: 90px;
       }
       
       .articles-grid {
@@ -282,15 +300,9 @@
     }
 
     @media (max-width: 480px) {
-      .player-header {
-        flex-direction: column;
-        gap: 12px;
-        text-align: center;
-      }
-      
       button {
-        padding: 10px 16px;
-        min-width: 85px;
+        padding: 10px 14px;
+        min-width: 80px;
       }
     }
 
@@ -310,27 +322,31 @@
 <body>
   <div class="container">
     <header>
-      <h1>📚 PubMed Makaleler</h1>
-      <div class="subtitle">Prof. Dr. Metin Çiriş - Sesli Podcast Koleksiyonu</div>
+      <h1>🎙️ Günlük Patoloji Makaleleri</h1>
+      <div class="subtitle">Her Güne Özel Sesli Podcast</div>
+      <div class="date-badge" id="currentDate">2 Ekim 2025</div>
     </header>
     
-    <!-- Oynatıcı -->
+    <!-- Kompakt Oynatıcı -->
     <div class="player-container">
-      <div class="player-header">
-        <div class="player-title">🎙️ Podcast Oynat</div>
-        <div class="current-track" id="currentTrack">Seçili makale yok</div>
-      </div>
-      
-      <div id="playerControls">
+      <div id="status">⏳</div>
+      <div class="player-controls">
         <button id="playBtn" disabled>▶️ Oynat</button>
         <button id="stopBtn" disabled>⏹️ Durdur</button>
       </div>
-      
-      <div id="status">⏳</div>
     </div>
     
     <!-- Makale Listesi -->
     <div class="articles-section" id="articlesSection"></div>
+
+    <!-- Footer -->
+    <footer>
+      <h3>📚 Kaynak Bilgisi</h3>
+      <p><strong>Dergiler:</strong> <span id="journalNames">Yükleniyor...</span></p>
+      <p>Makaleler PubMed API aracılığıyla günlük olarak otomatik çekilmektedir.</p>
+      <p>Bu içerik eğitim ve bilgilendirme amaçlıdır. Telif hakkı koruması altında değildir.</p>
+      <p class="journal-list">Tüm makaleler PubMed veritabanından güncel olarak alınmaktadır.</p>
+    </footer>
   </div>
 
   <script>
@@ -347,12 +363,18 @@
     const statusEl = document.getElementById('status');
     const playBtn = document.getElementById('playBtn');
     const stopBtn = document.getElementById('stopBtn');
-    const currentTrackEl = document.getElementById('currentTrack');
 
     let voices = [];
     let selectedVoiceTR = null;
 
     const JOURNAL_ROWS = [0, 11, 22, 33, 44, 55, 66, 77, 88, 99, 110, 121];
+
+    // Bugünün tarihini ayarla
+    function setCurrentDate() {
+      const options = { day: 'numeric', month: 'long', year: 'numeric' };
+      const today = new Date().toLocaleDateString('tr-TR', options);
+      document.getElementById('currentDate').textContent = today;
+    }
 
     function loadVoices() {
       voices = synth.getVoices();
@@ -433,12 +455,18 @@
         journalGroups = tempJournalGroups;
 
         renderArticleList();
+        updateJournalNames();
         enableControls();
-        statusEl.innerHTML = `✅ ${articles.length}`;
+        statusEl.innerHTML = `✅`;
       } catch (e) {
         console.error(e);
         statusEl.innerHTML = '❌';
       }
+    }
+
+    function updateJournalNames() {
+      const journalNames = journalGroups.map(g => g.journal).join(', ');
+      document.getElementById('journalNames').textContent = journalNames;
     }
 
     function renderArticleList() {
@@ -500,15 +528,10 @@
       });
       
       if (currentIndex >= 0 && currentIndex < articles.length) {
-        const article = articles[currentIndex];
-        currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${article.title.substring(0, 50)}${article.title.length > 50 ? '...' : ''}`;
-        
         const activeCard = allCards[currentIndex];
         if (activeCard) {
           activeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      } else {
-        currentTrackEl.textContent = 'Seçili makale yok';
       }
     }
 
@@ -573,6 +596,7 @@
     });
     stopBtn.addEventListener('click', stopReading);
 
+    setCurrentDate();
     fetchArticles();
   </script>
 </body>
