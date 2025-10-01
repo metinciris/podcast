@@ -47,31 +47,6 @@
       font-weight: 400;
     }
 
-    .content-panel {
-      background: white;
-      border-radius: 20px;
-      padding: 35px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      margin-bottom: 30px;
-      min-height: 250px;
-      font-size: 17px;
-      line-height: 1.8;
-      color: #2c3e50;
-      border: 1px solid #e1e8ed;
-    }
-
-    .content-panel a {
-      color: #3498db;
-      text-decoration: none;
-      font-weight: 600;
-      border-bottom: 2px solid transparent;
-      transition: border-color 0.3s ease;
-    }
-
-    .content-panel a:hover {
-      border-bottom-color: #3498db;
-    }
-
     .player-container {
       position: sticky;
       top: 20px;
@@ -94,7 +69,7 @@
     }
 
     .player-title {
-      font-size: 1.5em;
+      font-size: 1.6em;
       font-weight: 700;
       color: #2c3e50;
       display: flex;
@@ -221,10 +196,10 @@
       background: #fff5f5;
     }
 
-    .article-card.active::before {
+    .article-card.active::after {
       content: '▶️';
       position: absolute;
-      top: 15px;
+      bottom: 15px;
       right: 15px;
       font-size: 1.5em;
       animation: pulse 1.5s ease-in-out infinite;
@@ -290,11 +265,6 @@
         font-size: 2em;
       }
       
-      .content-panel {
-        padding: 25px;
-        font-size: 16px;
-      }
-      
       .player-container {
         padding: 20px;
         top: 10px;
@@ -344,31 +314,19 @@
       <div class="subtitle">Prof. Dr. Metin Çiriş - Sesli Podcast Koleksiyonu</div>
     </header>
     
-    <!-- İçerik Paneli -->
-    <div class="content-panel" id="contentPanel">
-      <div style="text-align: center; color: #95a5a6;">
-        ✨ Bir makale seçin veya oynat düğmesine basın
-        <br><br>
-        Sistem sadece başlıkları sesli okuyacak ve otomatik ilerleyecektir
-      </div>
-    </div>
-    
     <!-- Oynatıcı -->
     <div class="player-container">
       <div class="player-header">
-        <div class="player-title">🎧 Sesli Oynatıcı</div>
+        <div class="player-title">🎙️ Podcast Oynat</div>
         <div class="current-track" id="currentTrack">Seçili makale yok</div>
       </div>
       
       <div id="playerControls">
-        <button id="prevBtn" disabled>⏮️ Önceki</button>
         <button id="playBtn" disabled>▶️ Oynat</button>
-        <button id="pauseBtn" disabled>⏸️ Duraklat</button>
         <button id="stopBtn" disabled>⏹️ Durdur</button>
-        <button id="nextBtn" disabled>⏭️ Sonraki</button>
       </div>
       
-      <div id="status">Makaleler yükleniyor...</div>
+      <div id="status">⏳</div>
     </div>
     
     <!-- Makale Listesi -->
@@ -384,23 +342,17 @@
     let currentIndex = -1;
     let synth = window.speechSynthesis;
     let utterance = null;
-    let isPaused = false;
 
     const articlesSectionEl = document.getElementById('articlesSection');
-    const contentPanelEl = document.getElementById('contentPanel');
     const statusEl = document.getElementById('status');
-    const prevBtn = document.getElementById('prevBtn');
     const playBtn = document.getElementById('playBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
     const stopBtn = document.getElementById('stopBtn');
-    const nextBtn = document.getElementById('nextBtn');
     const currentTrackEl = document.getElementById('currentTrack');
 
     let voices = [];
     let selectedVoiceTR = null;
 
-    // Dergi başlığı satırları
-    const JOURNAL_ROWS = [1, 12, 23, 34, 45, 56, 67, 78, 89, 100, 111, 122];
+    const JOURNAL_ROWS = [0, 11, 22, 33, 44, 55, 66, 77, 88, 99, 110, 121];
 
     function loadVoices() {
       voices = synth.getVoices();
@@ -417,12 +369,10 @@
     }
     loadVoices();
 
-    // Google Sheets'ten veri çekme
     async function fetchArticles() {
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&range=A1:F132`;
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&range=A1:F132&headers=0`;
       try {
-        contentPanelEl.classList.add('loading');
-        statusEl.innerHTML = '⏳ PubMed makaleleri yükleniyor...';
+        statusEl.innerHTML = '⏳';
         
         const res = await fetch(url);
         if (!res.ok) throw new Error('Veri alınamadı');
@@ -436,16 +386,12 @@
         let tempArticles = [];
 
         data.table.rows.forEach((row, idx) => {
-          const rowNum = idx + 1;
-          
           let titleA = row.c[0] && row.c[0].v ? row.c[0].v.toString().trim() : '';
           let author = row.c[1] && row.c[1].v ? row.c[1].v.toString().trim() : '';
           let date = row.c[3] && row.c[3].v ? row.c[3].v.toString().trim() : '';
           let detailE = row.c[4] && row.c[4].v ? row.c[4].v.toString().trim() : '';
 
-          // Dergi başlığı mı?
-          if (JOURNAL_ROWS.includes(rowNum) && titleA) {
-            // Önceki dergi grubunu kaydet
+          if (JOURNAL_ROWS.includes(idx) && titleA) {
             if (currentJournal && tempArticles.length > 0) {
               tempJournalGroups.push({
                 journal: currentJournal,
@@ -454,8 +400,7 @@
               tempArticles = [];
             }
             currentJournal = titleA;
-          } else if (titleA && titleA.length > 10 && !JOURNAL_ROWS.includes(rowNum)) {
-            // Normal makale (dergi başlığı değilse)
+          } else if (titleA && titleA.length > 10 && !JOURNAL_ROWS.includes(idx)) {
             let pubmedLink = '';
             const linkMatch = detailE.match(/href="([^"]+)"/);
             if (linkMatch) {
@@ -473,7 +418,6 @@
           }
         });
 
-        // Son grubu ekle
         if (currentJournal && tempArticles.length > 0) {
           tempJournalGroups.push({
             journal: currentJournal,
@@ -481,7 +425,6 @@
           });
         }
 
-        // Tüm makaleleri tek listeye al
         articles = [];
         tempJournalGroups.forEach(group => {
           articles.push(...group.articles);
@@ -491,14 +434,10 @@
 
         renderArticleList();
         enableControls();
-        statusEl.innerHTML = `✅ ${articles.length} makale hazır!`;
-        contentPanelEl.classList.remove('loading');
-        contentPanelEl.innerHTML = '<div style="text-align: center; color: #95a5a6;">✨ Bir makale seçin!</div>';
+        statusEl.innerHTML = `✅ ${articles.length}`;
       } catch (e) {
         console.error(e);
-        statusEl.innerHTML = '❌ Veriler yüklenemedi';
-        contentPanelEl.classList.remove('loading');
-        contentPanelEl.innerHTML = '<p style="color: #e74c3c; text-align: center;">❌ Veriler yüklenemedi. Lütfen internet bağlantınızı kontrol edin.</p>';
+        statusEl.innerHTML = '❌';
       }
     }
 
@@ -551,10 +490,7 @@
 
     function enableControls() {
       playBtn.disabled = false;
-      prevBtn.disabled = true;
-      pauseBtn.disabled = true;
       stopBtn.disabled = true;
-      nextBtn.disabled = articles.length <= 1;
     }
 
     function updateSelection() {
@@ -565,24 +501,15 @@
       
       if (currentIndex >= 0 && currentIndex < articles.length) {
         const article = articles[currentIndex];
-        
-        // E sütunu içeriğini göster
-        contentPanelEl.innerHTML = article.detail || '<p style="color: #95a5a6; text-align: center;">📝 Bu makale için detaylı içerik bulunmuyor.</p>';
-        
         currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${article.title.substring(0, 50)}${article.title.length > 50 ? '...' : ''}`;
         
-        // Aktif makaleye scroll
         const activeCard = allCards[currentIndex];
         if (activeCard) {
           activeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       } else {
-        contentPanelEl.innerHTML = '<div style="text-align: center; color: #95a5a6;">✨ Bir makale seçin!</div>';
         currentTrackEl.textContent = 'Seçili makale yok';
       }
-      
-      prevBtn.disabled = currentIndex <= 0;
-      nextBtn.disabled = currentIndex >= articles.length - 1;
     }
 
     function speak(text) {
@@ -597,14 +524,10 @@
       utterance.pitch = 1.0;
       
       utterance.onend = () => {
-        statusEl.innerHTML = '✅ Okuma tamamlandı';
-        pauseBtn.disabled = true;
+        statusEl.innerHTML = '✅';
         stopBtn.disabled = true;
         playBtn.disabled = false;
-        isPaused = false;
-        pauseBtn.textContent = '⏸️ Duraklat';
         
-        // Otomatik sonraki makaleye geç
         if (currentIndex < articles.length - 1) {
           setTimeout(() => {
             currentIndex++;
@@ -615,13 +538,12 @@
       
       utterance.onerror = (e) => {
         console.error('SpeechSynthesis hata:', e);
-        statusEl.innerHTML = '❌ Okuma hatası';
+        statusEl.innerHTML = '❌';
       };
       
       synth.speak(utterance);
-      statusEl.innerHTML = '▶️ Başlık okunuyor...';
+      statusEl.innerHTML = '▶️';
       
-      pauseBtn.disabled = false;
       stopBtn.disabled = false;
       playBtn.disabled = true;
     }
@@ -630,42 +552,16 @@
       if (idx < 0 || idx >= articles.length) return;
       currentIndex = idx;
       updateSelection();
-      // Sadece başlığı oku
       speak(articles[idx].title);
-    }
-
-    function pauseReading() {
-      if (synth.speaking && !isPaused) {
-        synth.pause();
-        isPaused = true;
-        statusEl.innerHTML = '⏸️ Duraklatıldı';
-        pauseBtn.textContent = '▶️ Devam Et';
-      } else if (synth.paused && isPaused) {
-        synth.resume();
-        isPaused = false;
-        statusEl.innerHTML = '▶️ Devam ediyor...';
-        pauseBtn.textContent = '⏸️ Duraklat';
-      }
     }
 
     function stopReading() {
       if (synth.speaking) {
         synth.cancel();
-        isPaused = false;
-        statusEl.innerHTML = '⏹️ Durduruldu';
-        pauseBtn.disabled = true;
+        statusEl.innerHTML = '⏹️';
         stopBtn.disabled = true;
         playBtn.disabled = false;
-        pauseBtn.textContent = '⏸️ Duraklat';
       }
-    }
-
-    function playPrev() {
-      if (currentIndex > 0) playArticle(currentIndex - 1);
-    }
-
-    function playNext() {
-      if (currentIndex < articles.length - 1) playArticle(currentIndex + 1);
     }
 
     playBtn.addEventListener('click', () => {
@@ -675,10 +571,7 @@
         playArticle(currentIndex);
       }
     });
-    pauseBtn.addEventListener('click', pauseReading);
     stopBtn.addEventListener('click', stopReading);
-    prevBtn.addEventListener('click', playPrev);
-    nextBtn.addEventListener('click', playNext);
 
     fetchArticles();
   </script>
