@@ -15,7 +15,7 @@
     <h1>Prof. Dr. Metin Çiriş - Podcast Makaleler</h1>
     
     <div class="content-panel" id="contentPanel">
-      Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.
+      Bir makale seçin veya oynat düğmesine basın.
     </div>
 
     <!-- Oynatıcı -->
@@ -38,7 +38,7 @@
 
     <!-- Makale Listesi -->
     <div class="articles-section">
-      <div class="articles-title">Makaleler (A Sütunu - Sesli Okunacak)</div>
+      <div class="articles-title">Makaleler </div>
       <ul id="articles"></ul>
     </div>
   </div>
@@ -139,7 +139,7 @@
         contentPanelEl.innerHTML = articles[currentIndex].detail || '<p style="color: #7f8c8d; font-style: italic;">Bu makale için detaylı içerik bulunmuyor.</p>';
         currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${articles[currentIndex].title.substring(0, 50)}${articles[currentIndex].title.length > 50 ? '...' : ''}`;
       } else {
-        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.';
+        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği görünecektir.';
         currentTrackEl.textContent = 'Seçili makale yok';
       }
       prevBtn.disabled = currentIndex <= 0;
