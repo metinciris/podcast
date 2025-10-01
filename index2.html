@@ -146,6 +146,7 @@
       nextBtn.disabled = currentIndex >= articles.length - 1;
     }
 
+    // Yeni fonksiyon: <lang lang="en">...</lang> etiketlerini doğru seslendirme
     function speakWithLangTags(text) {
       if (!text) return;
 
@@ -190,7 +191,7 @@
       if (idx < 0 || idx >= articles.length) return;
       currentIndex = idx;
       updateSelection();
-      speakWithLangTags(articles[idx].title);
+      speakWithLangTags(articles[idx].title);  // Yeni fonksiyonu çağırdık
     }
 
     function pauseReading() {
