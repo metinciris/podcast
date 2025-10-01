@@ -235,7 +235,7 @@
     
     <!-- Büyük İçerik Paneli - E Sütunu Burada Gösterilecek -->
     <div class="content-panel" id="contentPanel">
-      Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği görünecektir.
+      Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.
     </div>
     
     <!-- Oynatıcı -->
@@ -258,7 +258,7 @@
     
     <!-- Makale Listesi -->
     <div class="articles-section">
-      <div class="articles-title">Makaleler</div>
+      <div class="articles-title">Makaleler (A Sütunu - Sesli Okunacak)</div>
       <ul id="articles"></ul>
     </div>
   </div>
@@ -267,9 +267,17 @@
     const SHEET_ID = '148p3M41R52gVVjtLSF2Qh8rJvBPEWJ7SV4lgSBQYwLc';
     const GID = '1109640564';
 
+    // ----------- AYAR ----------
+    // Tüm okumalarda cinsiyet tercihi:
+    // 'male' veya 'female'
+    const VOICE_GENDER = 'female';
+    // Etiket koymayı unuttuğunda basit otomatik İngilizce algısı
+    const AUTO_TAG = true;
+    // ---------------------------
+
     let articles = [];
     let currentIndex = -1;
-    const synth = window.speechSynthesis;
+    let synth = window.speechSynthesis;
     let utterance = null;
     let isPaused = false;
 
@@ -284,81 +292,98 @@
     const currentTrackEl = document.getElementById('currentTrack');
 
     let voices = [];
-    let selectedVoice = null;
+    let selectedVoice = null; // default (TR)
+    let chosenTRVoice = null;
+    let chosenENVoice = null;
+
+    // Cinsiyete göre isim kalıpları (tarayıcıdan tarayıcıya değişebilir, en yaygınlar)
+    const FEMALE_HINTS = /(female|kad[ıi]n|seda|filiz|zeynep|ayla|aria|emma|joanna|jessa|salli|linda|hazal|elif)/i;
+    const MALE_HINTS   = /(male|erkek|tolga|murat|ali|omer|guy|george|eric|brian|mike|dave|murat|kenan|omer)/i;
+
+    function getVoicesSafe() {
+      const v = synth.getVoices();
+      // Bazı tarayıcılarda boş dönebilir; onvoiceschanged beklenir
+      return Array.isArray(v) ? v : [];
+    }
 
     function loadVoices() {
-      voices = synth.getVoices();
-      selectedVoice = voices.find(v =>
-        v.lang === 'tr-TR' ||
-        (v.lang && v.lang.toLowerCase().startsWith('tr')) ||
-        v.name.toLowerCase().includes('turkish') ||
-        v.name.toLowerCase().includes('türk')
-      );
-      if (!selectedVoice && voices.length > 0) {
-        selectedVoice = voices[0];
-      }
+      voices = getVoicesSafe();
+
+      // Tercih edilen cinsiyet eşlemesi
+      const gender = (VOICE_GENDER || 'female').toLowerCase();
+
+      chosenTRVoice = pickVoiceByLangAndGender('tr-TR', gender) ||
+                      pickVoiceByLangAndGender('tr', gender);
+      chosenENVoice = pickVoiceByLangAndGender('en-US', gender) ||
+                      pickVoiceByLangAndGender('en-GB', gender) ||
+                      pickVoiceByLangAndGender('en', gender);
+
+      // Varsayılan olarak TR sesi seç
+      selectedVoice = chosenTRVoice || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('tr')) || voices[0] || null;
     }
+
     if (speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = loadVoices;
+      speechSynthesis.onvoiceschanged = () => {
+        loadVoices();
+      };
     }
     loadVoices();
 
-    // ------- Yardımcılar -------
-    function pickVoiceByLang(langCode) {
-      const all = speechSynthesis.getVoices();
-      return all.find(v => v.lang === langCode)
-          || all.find(v => v.lang && v.lang.toLowerCase().startsWith(langCode.split('-')[0]))
-          || selectedVoice
-          || all[0]
-          || null;
+    function pickVoiceByLangAndGender(langCode, gender) {
+      const all = getVoicesSafe();
+      // Dil filtrele
+      let pool = all.filter(v => {
+        if (!v.lang) return false;
+        const L = v.lang.toLowerCase();
+        const t = langCode.toLowerCase();
+        return L === t || L.startsWith(t.split('-')[0]);
+      });
+
+      if (pool.length === 0) return null;
+
+      // Cinsiyet ipucuna göre sırala (eşleşenler öne)
+      const hints = gender === 'male' ? MALE_HINTS : FEMALE_HINTS;
+      pool.sort((a, b) => {
+        const am = hints.test(a.name) ? 0 : 1;
+        const bm = hints.test(b.name) ? 0 : 1;
+        return am - bm;
+      });
+
+      return pool[0] || null;
     }
 
+    // Metinde görünen <lang> etiketlerini listede gizlemek için
     function stripLangTags(s) {
-      return s.replace(/<lang\s+lang="[^"]*">/g, '').replace(/<\/lang>/g, '');
+      return (s || '')
+        .replace(/<lang\s+lang="[^"]*">/g, '')
+        .replace(/<\/lang>/g, '');
     }
 
-    // <lang> bloklarını koruyup dış kısımlara otomatik etiket uygula
-    const AUTO_TAG = false; // kapatmak istersen false yap
+    // Opsiyonel otomatik İngilizce işaretleme (bilinen dergi/kısaltma)
     const KNOWN_EN_TERMS = [
-      'Histopathology','The Lancet','Lancet','Nature','Science','Cell','NEJM','BMJ',
-      'JAMA','PLOS ONE','Annals of Internal Medicine','Radiology','Gastroenterology'
+      'Histopathology','The Lancet','Lancet','Nature','Science','Cell','NEJM','BMJ','JAMA',
+      'PLOS ONE','Annals of Internal Medicine','Radiology','Gastroenterology','Circulation',
+      'Brain','Gut','PNAS','Blood','Chest','Diabetologia'
     ];
 
-    function autoTagEnglish(raw) {
-      if (!AUTO_TAG) return raw;
+    function autoTagEnglish(title) {
+      if (!AUTO_TAG) return title;
+      let t = title;
 
-      // Mevcut <lang ...>...</lang> bloklarını koru
-      const tags = [];
-      let idx = 0;
-      let safe = raw.replace(/<lang\s+lang=".*?">.*?<\/lang>/g, (m) => {
-        const key = `__LANGTAG_${idx++}__`;
-        tags.push(m);
-        return key;
-      });
-
-      // Bilinen İngilizce terimleri işaretle (çakışmayı azaltmak için uzun adlar önce)
-      KNOWN_EN_TERMS.sort((a,b)=>b.length-a.length).forEach(term => {
+      // Bilinen terimler
+      KNOWN_EN_TERMS.forEach(term => {
         const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const rx = new RegExp(`(\\b)(${esc})(\\b)`, 'g');
-        safe = safe.replace(rx, `$1<lang lang="en">$2</lang>$3`);
+        t = t.replace(rx, `$1<lang lang="en">$2</lang>$3`);
       });
 
-      // İçinde YANYANA EN AZ İKİ BÜYÜK HARF bulunan kelimeleri İngilizce say
-      // Örn: DNA, MRI, COVID-19, USA, mRNA -> (mRNA'da "RNA" kısmı tetikler)
-      safe = safe.replace(/\b([A-Za-z0-9\-+/&_.]*[A-Z]{2}[A-Za-z0-9\-+/&_.]*)\b/g, (m) => {
-        // Eğer zaten bir <lang> içine girmişse (placeholder değil), dokunma
-        if (m.startsWith('__LANGTAG_') && m.endsWith('__')) return m;
-        // Çift kapsama olmasın: zaten <lang> ile işaretlenmiş kısım restore aşamasında gelecek
-        return `<lang lang="en">${m}</lang>`;
-      });
+      // Tam büyük harfli 2–8 uzunluklu kısaltmalar (DNA, MRI, BMJ, COVID vs.)
+      t = t.replace(/\b([A-Z]{2,8})\b/g, '<lang lang="en">$1</lang>');
 
-      // Placeholder'ları geri yükle
-      safe = safe.replace(/__LANGTAG_(\d+)__/g, (_, n) => tags[Number(n)]);
-
-      return safe;
+      return t;
     }
 
-    // ------- Google Sheets'ten veri çekme -------
+    // Google Sheets'ten veri çekme
     async function fetchArticles() {
       const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&range=A1:E132`;
       try {
@@ -414,24 +439,25 @@
         const clean = stripLangTags(articles[currentIndex].title);
         currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${clean.substring(0, 50)}${clean.length > 50 ? '...' : ''}`;
       } else {
-        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği görünecektir.';
+        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.';
         currentTrackEl.textContent = 'Seçili makale yok';
       }
       prevBtn.disabled = currentIndex <= 0;
       nextBtn.disabled = currentIndex >= articles.length - 1;
     }
 
-    // ------- Çok dilli okuma (etiket + otomatik EN) -------
+    // Çok dilli (TR varsayılan) okuma: <lang lang="en">…</lang> parçalarını İngilizce oku
     function speakWithLangTags(rawText) {
       if (!rawText) return;
 
-      // Mevcut okuma varsa iptal
+      // Çalışan okutmayı iptal et
       synth.cancel();
+      isPaused = false;
 
-      // Otomatik İngilizce etiketleme uygula (varsa)
+      // otomatik işaretle (isteğe bağlı)
       const text = autoTagEnglish(rawText);
 
-      // <lang> parçalarına böl
+      // parçala
       const regex = /<lang\s+lang="(.*?)">(.*?)<\/lang>/g;
       let parts = [];
       let lastIndex = 0;
@@ -448,48 +474,61 @@
         parts.push({ lang: 'tr-TR', text: text.substring(lastIndex) });
       }
 
-      // Kontrolleri güncelle
+      // UI durumları
       statusEl.textContent = 'Okuma devam ediyor...';
       pauseBtn.disabled = false;
       stopBtn.disabled = false;
       playBtn.disabled = true;
-      pauseBtn.textContent = '⏸️ Duraklat';
-      isPaused = false;
 
-      // Sırayla okut
+      function afterAllComplete() {
+        statusEl.textContent = 'Okuma tamamlandı.';
+        pauseBtn.disabled = true;
+        stopBtn.disabled = true;
+        playBtn.disabled = false;
+        isPaused = false;
+        pauseBtn.textContent = '⏸️ Duraklat';
+        // Otomatik sonraki
+        if (currentIndex < articles.length - 1) {
+          currentIndex++;
+          playArticle(currentIndex);
+        }
+      }
+
+      // sırayla okut
       function speakNext(i) {
         if (i >= parts.length) {
-          // Tüm parçalar bitti
-          statusEl.textContent = 'Okuma tamamlandı.';
-          pauseBtn.disabled = true;
-          stopBtn.disabled = true;
-          playBtn.disabled = false;
-          isPaused = false;
-          pauseBtn.textContent = '⏸️ Duraklat';
-
-          // Otomatik sonraki makaleye geç
-          if (currentIndex < articles.length - 1) {
-            currentIndex++;
-            playArticle(currentIndex);
-          }
+          afterAllComplete();
           return;
         }
         const seg = parts[i];
         const u = new SpeechSynthesisUtterance(seg.text);
-        u.lang = seg.lang || 'tr-TR';
-        const v = pickVoiceByLang(u.lang);
+
+        // Dil ve ses seçimi
+        let langNorm = (seg.lang || '').toLowerCase();
+        if (langNorm === 'en') langNorm = 'en-US'; // tarayıcı uyumu
+        if (langNorm === 'tr') langNorm = 'tr-TR';
+
+        u.lang = langNorm;
+
+        // TR/EN için tek cinsiyet tercihi
+        let v = null;
+        if (langNorm.startsWith('tr')) {
+          v = chosenTRVoice || selectedVoice;
+        } else if (langNorm.startsWith('en')) {
+          v = chosenENVoice || pickVoiceByLangAndGender('en', VOICE_GENDER) || selectedVoice;
+        }
         if (v) u.voice = v;
+
         u.rate = 0.9;
         u.pitch = 1.0;
         u.onend = () => speakNext(i + 1);
-        u.onerror = () => speakNext(i + 1); // hatada da devam et
+        u.onerror = () => speakNext(i + 1);
         speechSynthesis.speak(u);
       }
-
       speakNext(0);
     }
 
-    // ------- Orijinal speak (kalsın, diğer yerlerde ister kullan) -------
+    // Eski speak fonksiyonunu bırakıyoruz ama playArticle artık speakWithLangTags çağıracak
     function speak(text) {
       if (!text) return;
       if (utterance) {
@@ -527,7 +566,7 @@
       if (idx < 0 || idx >= articles.length) return;
       currentIndex = idx;
       updateSelection();
-      // A sütunu başlığını çok dilli okuma ile okut
+      // SADECE A sütununu (başlık) oku, E sütununu okuma
       speakWithLangTags(articles[idx].title);
     }
 
