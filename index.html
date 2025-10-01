@@ -412,6 +412,15 @@
           let author = row.c[1] && row.c[1].v ? row.c[1].v.toString().trim() : '';
           let date = row.c[3] && row.c[3].v ? row.c[3].v.toString().trim() : '';
           let detailE = row.c[4] && row.c[4].v ? row.c[4].v.toString().trim() : '';
+          let pmid = row.c[5] && row.c[5].v ? row.c[5].v.toString().trim() : '';
+
+          let pubmedLink = '';
+          const linkMatch = detailE.match(/href="([^"]+)"/);
+          if (linkMatch) {
+            pubmedLink = linkMatch[1];
+          } else if (pmid) {
+            pubmedLink = `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`;
+          }
 
           if (JOURNAL_ROWS.includes(idx) && titleA) {
             if (currentJournal && tempArticles.length > 0) {
@@ -423,18 +432,13 @@
             }
             currentJournal = titleA;
           } else if (titleA && titleA.length > 10 && !JOURNAL_ROWS.includes(idx)) {
-            let pubmedLink = '';
-            const linkMatch = detailE.match(/href="([^"]+)"/);
-            if (linkMatch) {
-              pubmedLink = linkMatch[1];
-            }
-
             tempArticles.push({
               title: titleA,
               author: author,
               date: date,
               detail: detailE,
               link: pubmedLink,
+              pmid: pmid,
               journal: currentJournal
             });
           }
@@ -498,6 +502,7 @@
               ${article.author ? `<div class="meta-item">👤 ${article.author}</div>` : ''}
               ${article.date ? `<div class="meta-item">📅 ${article.date}</div>` : ''}
               ${article.journal ? `<div class="meta-item">📰 ${article.journal}</div>` : ''}
+              ${article.pmid ? `<div class="meta-item">PMID: ${article.pmid}</div>` : ''}
             </div>
             <div class="article-badges">
               ${article.link ? `<a href="${article.link}" target="_blank" class="link-badge" onclick="event.stopPropagation()">🔗 PubMed</a>` : ''}
