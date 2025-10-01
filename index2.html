@@ -1,627 +1,267 @@
-<!DOCTYPE html>
-<html lang="tr">
+<script>
+  const SHEET_ID = '148p3M41R52gVVjtLSF2Qh8rJvBPEWJ7SV4lgSBQYwLc';
+  const GID = '1109640564';
 
-<head>
-  <meta charset="UTF-8" />
-  <title>Günlük Değişen Podcast Makaleler - Prof. Dr. Metin Çiriş</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      margin: 0;
-      padding: 0;
-      color: #333;
-      min-height: 100vh;
+  let articles = [];
+  let currentIndex = -1;
+  let synth = window.speechSynthesis;
+  let utterance = null;
+  let isPaused = false;
+
+  const articlesEl = document.getElementById('articles');
+  const contentPanelEl = document.getElementById('contentPanel');
+  const statusEl = document.getElementById('status');
+  const prevBtn = document.getElementById('prevBtn');
+  const playBtn = document.getElementById('playBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const currentTrackEl = document.getElementById('currentTrack');
+
+  // Ses seçimi (varsayılan TR, gerektiğinde EN)
+  let voices = [];
+  let selectedVoice = null;
+
+  function loadVoices() {
+    voices = synth.getVoices();
+    selectedVoice = voices.find(v =>
+      v.lang === 'tr-TR' ||
+      (v.lang && v.lang.toLowerCase().startsWith('tr')) ||
+      v.name.toLowerCase().includes('turkish') ||
+      v.name.toLowerCase().includes('türk')
+    ) || voices[0] || null;
+  }
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+  loadVoices();
+
+  // İstenen dil koduna göre uygun voice bul
+  function pickVoiceByLang(langCode) {
+    const all = speechSynthesis.getVoices();
+    // Tam eşleşme dene (en-US / tr-TR)
+    let v = all.find(v => v.lang === langCode);
+    if (!v) {
+      // Bölgesiz eşleşme (en / tr)
+      const base = langCode.split('-')[0];
+      v = all.find(v => v.lang && v.lang.toLowerCase().startsWith(base));
     }
+    return v || selectedVoice || all[0] || null;
+  }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
+  // Google Sheets'ten veri çekme
+  async function fetchArticles() {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&range=A1:E132`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Veri alınamadı');
+      const text = await res.text();
+      const jsonText = text.substring(text.indexOf('(') + 1, text.lastIndexOf(')'));
+      const data = JSON.parse(jsonText);
+      if (!data.table || !data.table.rows) throw new Error('Tablo verisi alınamadı');
+
+      articles = data.table.rows.map(row => {
+        const title = row.c[0]?.v ? String(row.c[0].v).trim() : ''; // A sütunu (EN)
+        const detail = row.c[4]?.v ? String(row.c[4].v).trim() : ''; // E sütunu (TR)
+        return { title, detail };
+      }).filter(a => a.title.length > 0 || a.detail.length > 0);
+
+      renderArticleList();
+      enableControls();
+      statusEl.textContent = `${articles.length} makale yüklendi.`;
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = 'Makale verileri yüklenemedi.';
+      contentPanelEl.innerHTML = '<p style="color: #e74c3c;">Makale verileri yüklenemedi. Lütfen internet bağlantınızı kontrol edin.</p>';
     }
+  }
 
-    h1 {
-      text-align: center;
-      color: #2c3e50;
-      margin-bottom: 20px;
-      font-size: 2.2em;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-    }
-
-    .content-panel {
-      background: white;
-      border-radius: 12px;
-      padding: 25px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-      margin-bottom: 25px;
-      border: 1px solid #e1e5e9;
-      min-height: 200px;
-      font-size: 18px;
-      line-height: 1.7;
-    }
-
-    .player-container {
-      position: sticky;
-      top: 0;
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-      margin-bottom: 25px;
-      z-index: 100;
-      border: 1px solid #e1e5e9;
-    }
-
-    .player-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #f1f3f4;
-    }
-
-    .player-title {
-      font-size: 1.4em;
-      font-weight: bold;
-      color: #2c3e50;
-    }
-
-    .current-track {
-      font-size: 0.9em;
-      color: #7f8c8d;
-      font-style: italic;
-    }
-
-    #playerControls {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 15px;
-    }
-
-    button {
-      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 12px 20px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      min-width: 90px;
-      font-weight: 600;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-
-    button:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      background: linear-gradient(135deg, #2980b9 0%, #2471a3 100%);
-    }
-
-    button:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    button:disabled {
-      background: #bdc3c7;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    #status {
-      text-align: center;
-      font-style: italic;
-      color: #7f8c8d;
-      min-height: 20px;
-      padding: 8px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      font-size: 0.9em;
-    }
-
-    .articles-section {
-      margin-top: 20px;
-    }
-
-    .articles-title {
-      font-size: 1.3em;
-      color: #2c3e50;
-      margin-bottom: 15px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid #3498db;
-    }
-
-    #articles {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 12px;
-    }
-
-    #articles li {
-      background-color: white;
-      border-radius: 10px;
-      padding: 15px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-      border-left: 4px solid transparent;
-      height: 100%;
-    }
-
-    #articles li:hover {
-      background-color: #f8f9fa;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      border-left: 4px solid #3498db;
-    }
-
-    #articles li.active {
-      background-color: #e3f2fd;
-      font-weight: bold;
-      border-left: 4px solid #e74c3c;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .article-title {
-      font-size: 14px;
-      line-height: 1.4;
-      margin: 0;
-    }
-
-    @media (max-width: 768px) {
-      .container {
-        padding: 15px;
-      }
-      
-      h1 {
-        font-size: 1.8em;
-      }
-      
-      .content-panel {
-        padding: 20px;
-        font-size: 16px;
-      }
-      
-      .player-container {
-        padding: 15px;
-      }
-      
-      button {
-        padding: 10px 15px;
-        font-size: 13px;
-        min-width: 80px;
-      }
-      
-      #playerControls {
-        gap: 5px;
-      }
-      
-      #articles {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .player-header {
-        flex-direction: column;
-        gap: 8px;
-        text-align: center;
-      }
-      
-      button {
-        padding: 8px 12px;
-        min-width: 70px;
-      }
-      
-      .content-panel {
-        padding: 15px;
-        font-size: 15px;
-      }
-    }
-  </style>
-</head>
-
-<body>
-  <div class="container">
-    <h1>Prof. Dr. Metin Çiriş - Podcast Makaleler</h1>
-    
-    <!-- Büyük İçerik Paneli - E Sütunu Burada Gösterilecek -->
-    <div class="content-panel" id="contentPanel">
-      Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.
-    </div>
-    
-    <!-- Oynatıcı -->
-    <div class="player-container">
-      <div class="player-header">
-        <div class="player-title">Sesli Oynatıcı</div>
-        <div class="current-track" id="currentTrack">Seçili makale yok</div>
-      </div>
-      
-      <div id="playerControls">
-        <button id="prevBtn" disabled>⏮️ Önceki</button>
-        <button id="playBtn" disabled>▶️ Oynat</button>
-        <button id="pauseBtn" disabled>⏸️ Duraklat</button>
-        <button id="stopBtn" disabled>⏹️ Durdur</button>
-        <button id="nextBtn" disabled>⏭️ Sonraki</button>
-      </div>
-      
-      <div id="status">Bir makale seçin ve oynat'a basın</div>
-    </div>
-    
-    <!-- Makale Listesi -->
-    <div class="articles-section">
-      <div class="articles-title">Makaleler (A Sütunu - Sesli Okunacak)</div>
-      <ul id="articles"></ul>
-    </div>
-  </div>
-
-  <script>
-    const SHEET_ID = '148p3M41R52gVVjtLSF2Qh8rJvBPEWJ7SV4lgSBQYwLc';
-    const GID = '1109640564';
-
-    // ----------- AYAR ----------
-    // Tüm okumalarda cinsiyet tercihi:
-    // 'male' veya 'female'
-    const VOICE_GENDER = 'female';
-    // Etiket koymayı unuttuğunda basit otomatik İngilizce algısı
-    const AUTO_TAG = true;
-    // ---------------------------
-
-    let articles = [];
-    let currentIndex = -1;
-    let synth = window.speechSynthesis;
-    let utterance = null;
-    let isPaused = false;
-
-    const articlesEl = document.getElementById('articles');
-    const contentPanelEl = document.getElementById('contentPanel');
-    const statusEl = document.getElementById('status');
-    const prevBtn = document.getElementById('prevBtn');
-    const playBtn = document.getElementById('playBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const currentTrackEl = document.getElementById('currentTrack');
-
-    let voices = [];
-    let selectedVoice = null; // default (TR)
-    let chosenTRVoice = null;
-    let chosenENVoice = null;
-
-    // Cinsiyete göre isim kalıpları (tarayıcıdan tarayıcıya değişebilir, en yaygınlar)
-    const FEMALE_HINTS = /(female|kad[ıi]n|seda|filiz|zeynep|ayla|aria|emma|joanna|jessa|salli|linda|hazal|elif)/i;
-    const MALE_HINTS   = /(male|erkek|tolga|murat|ali|omer|guy|george|eric|brian|mike|dave|murat|kenan|omer)/i;
-
-    function getVoicesSafe() {
-      const v = synth.getVoices();
-      // Bazı tarayıcılarda boş dönebilir; onvoiceschanged beklenir
-      return Array.isArray(v) ? v : [];
-    }
-
-    function loadVoices() {
-      voices = getVoicesSafe();
-
-      // Tercih edilen cinsiyet eşlemesi
-      const gender = (VOICE_GENDER || 'female').toLowerCase();
-
-      chosenTRVoice = pickVoiceByLangAndGender('tr-TR', gender) ||
-                      pickVoiceByLangAndGender('tr', gender);
-      chosenENVoice = pickVoiceByLangAndGender('en-US', gender) ||
-                      pickVoiceByLangAndGender('en-GB', gender) ||
-                      pickVoiceByLangAndGender('en', gender);
-
-      // Varsayılan olarak TR sesi seç
-      selectedVoice = chosenTRVoice || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('tr')) || voices[0] || null;
-    }
-
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = () => {
-        loadVoices();
-      };
-    }
-    loadVoices();
-
-    function pickVoiceByLangAndGender(langCode, gender) {
-      const all = getVoicesSafe();
-      // Dil filtrele
-      let pool = all.filter(v => {
-        if (!v.lang) return false;
-        const L = v.lang.toLowerCase();
-        const t = langCode.toLowerCase();
-        return L === t || L.startsWith(t.split('-')[0]);
+  function renderArticleList() {
+    articlesEl.innerHTML = '';
+    articles.forEach((article, idx) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<div class="article-title">${article.title || '(Başlık yok)'}</div>`;
+      li.addEventListener('click', () => {
+        playArticle(idx);
       });
+      articlesEl.appendChild(li);
+    });
+  }
 
-      if (pool.length === 0) return null;
+  function enableControls() {
+    playBtn.disabled = false;
+    prevBtn.disabled = true;
+    pauseBtn.disabled = true;
+    stopBtn.disabled = true;
+    nextBtn.disabled = articles.length <= 1;
+  }
 
-      // Cinsiyet ipucuna göre sırala (eşleşenler öne)
-      const hints = gender === 'male' ? MALE_HINTS : FEMALE_HINTS;
-      pool.sort((a, b) => {
-        const am = hints.test(a.name) ? 0 : 1;
-        const bm = hints.test(b.name) ? 0 : 1;
-        return am - bm;
-      });
-
-      return pool[0] || null;
+  function updateSelection() {
+    Array.from(articlesEl.children).forEach((li, idx) => {
+      li.classList.toggle('active', idx === currentIndex);
+    });
+    if (currentIndex >= 0 && currentIndex < articles.length) {
+      // E sütununu panelde göster
+      contentPanelEl.innerHTML = articles[currentIndex].detail || '<p style="color: #7f8c8d; font-style: italic;">Bu makale için detaylı içerik bulunmuyor.</p>';
+      const shown = articles[currentIndex].title || '(Başlık yok)';
+      currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${shown.substring(0, 50)}${shown.length > 50 ? '...' : ''}`;
+    } else {
+      contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği görünecektir.';
+      currentTrackEl.textContent = 'Seçili makale yok';
     }
+    prevBtn.disabled = currentIndex <= 0;
+    nextBtn.disabled = currentIndex >= articles.length - 1;
+  }
 
-    // Metinde görünen <lang> etiketlerini listede gizlemek için
-    function stripLangTags(s) {
-      return (s || '')
-        .replace(/<lang\s+lang="[^"]*">/g, '')
-        .replace(/<\/lang>/g, '');
-    }
+  // Çok parçalı okuma: sırayla EN(A) sonra TR(E)
+  function speakSequence(sequence, onAllEnd) {
+    if (!sequence || sequence.length === 0) return;
+    synth.cancel(); // varsa önceki oku iptal
 
-    // Opsiyonel otomatik İngilizce işaretleme (bilinen dergi/kısaltma)
-    const KNOWN_EN_TERMS = [
-      'Histopathology','The Lancet','Lancet','Nature','Science','Cell','NEJM','BMJ','JAMA',
-      'PLOS ONE','Annals of Internal Medicine','Radiology','Gastroenterology','Circulation',
-      'Brain','Gut','PNAS','Blood','Chest','Diabetologia'
-    ];
-
-    function autoTagEnglish(title) {
-      if (!AUTO_TAG) return title;
-      let t = title;
-
-      // Bilinen terimler
-      KNOWN_EN_TERMS.forEach(term => {
-        const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const rx = new RegExp(`(\\b)(${esc})(\\b)`, 'g');
-        t = t.replace(rx, `$1<lang lang="en">$2</lang>$3`);
-      });
-
-      // Tam büyük harfli 2–8 uzunluklu kısaltmalar (DNA, MRI, BMJ, COVID vs.)
-      t = t.replace(/\b([A-Z]{2,8})\b/g, '<lang lang="en">$1</lang>');
-
-      return t;
-    }
-
-    // Google Sheets'ten veri çekme
-    async function fetchArticles() {
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&range=A1:E132`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Veri alınamadı');
-        const text = await res.text();
-        const jsonText = text.substring(text.indexOf('(') + 1, text.lastIndexOf(')'));
-        const data = JSON.parse(jsonText);
-        if (!data.table || !data.table.rows) throw new Error('Tablo verisi alınamadı');
-
-        articles = data.table.rows.map(row => {
-          let title = row.c[0] && row.c[0].v ? row.c[0].v.toString().trim() : '';
-          let detail = row.c[4] && row.c[4].v ? row.c[4].v.toString().trim() : '';
-          return { title, detail };
-        }).filter(a => a.title.length > 5);
-
-        renderArticleList();
-        enableControls();
-        statusEl.textContent = `${articles.length} makale yüklendi.`;
-      } catch (e) {
-        console.error(e);
-        statusEl.textContent = 'Makale verileri yüklenemedi.';
-        contentPanelEl.innerHTML = '<p style="color: #e74c3c;">Makale verileri yüklenemedi. Lütfen internet bağlantınızı kontrol edin.</p>';
+    let i = 0;
+    function next() {
+      if (i >= sequence.length) {
+        onAllEnd && onAllEnd();
+        return;
       }
-    }
+      const seg = sequence[i++];
+      const u = new SpeechSynthesisUtterance(seg.text);
+      u.lang = seg.lang;
+      const v = pickVoiceByLang(seg.lang);
+      if (v) u.voice = v;
+      u.rate = seg.rate ?? 0.95;  // EN için biraz daha akıcı
+      if (seg.lang.startsWith('tr')) u.rate = 0.9; // TR için rahat hız
+      u.pitch = 1.0;
 
-    function renderArticleList() {
-      articlesEl.innerHTML = '';
-      articles.forEach((article, idx) => {
-        const li = document.createElement('li');
-        li.innerHTML = `<div class="article-title">${stripLangTags(article.title)}</div>`;
-        li.addEventListener('click', () => {
-          playArticle(idx);
-        });
-        articlesEl.appendChild(li);
-      });
-    }
+      u.onend = () => next();
+      u.onerror = () => next();
 
-    function enableControls() {
-      playBtn.disabled = false;
-      prevBtn.disabled = true;
+      // Durum/tuşlar
+      statusEl.textContent = `Okunuyor (${seg.lang})...`;
+      pauseBtn.disabled = false;
+      stopBtn.disabled = false;
+      playBtn.disabled = true;
+
+      speechSynthesis.speak(u);
+    }
+    next();
+  }
+
+  // Orijinal tek-parça speak kalsın (gerekirse)
+  function speak(text) {
+    if (!text) return;
+    if (utterance) {
+      synth.cancel();
+    }
+    utterance = new SpeechSynthesisUtterance(text);
+    // Normal düzen Türkçe
+    const v = pickVoiceByLang('tr-TR');
+    if (v) utterance.voice = v;
+    utterance.lang = 'tr-TR';
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.onend = () => {
+      statusEl.textContent = 'Okuma tamamlandı.';
       pauseBtn.disabled = true;
       stopBtn.disabled = true;
-      nextBtn.disabled = articles.length <= 1;
-    }
-
-    function updateSelection() {
-      Array.from(articlesEl.children).forEach((li, idx) => {
-        li.classList.toggle('active', idx === currentIndex);
-      });
-      if (currentIndex >= 0 && currentIndex < articles.length) {
-        contentPanelEl.innerHTML = articles[currentIndex].detail || '<p style="color: #7f8c8d; font-style: italic;">Bu makale için detaylı içerik bulunmuyor.</p>';
-        const clean = stripLangTags(articles[currentIndex].title);
-        currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${clean.substring(0, 50)}${clean.length > 50 ? '...' : ''}`;
-      } else {
-        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.';
-        currentTrackEl.textContent = 'Seçili makale yok';
-      }
-      prevBtn.disabled = currentIndex <= 0;
-      nextBtn.disabled = currentIndex >= articles.length - 1;
-    }
-
-    // Çok dilli (TR varsayılan) okuma: <lang lang="en">…</lang> parçalarını İngilizce oku
-    function speakWithLangTags(rawText) {
-      if (!rawText) return;
-
-      // Çalışan okutmayı iptal et
-      synth.cancel();
+      playBtn.disabled = false;
       isPaused = false;
-
-      // otomatik işaretle (isteğe bağlı)
-      const text = autoTagEnglish(rawText);
-
-      // parçala
-      const regex = /<lang\s+lang="(.*?)">(.*?)<\/lang>/g;
-      let parts = [];
-      let lastIndex = 0;
-      let match;
-
-      while ((match = regex.exec(text)) !== null) {
-        if (match.index > lastIndex) {
-          parts.push({ lang: 'tr-TR', text: text.substring(lastIndex, match.index) });
-        }
-        parts.push({ lang: match[1], text: match[2] });
-        lastIndex = regex.lastIndex;
-      }
-      if (lastIndex < text.length) {
-        parts.push({ lang: 'tr-TR', text: text.substring(lastIndex) });
-      }
-
-      // UI durumları
-      statusEl.textContent = 'Okuma devam ediyor...';
-      pauseBtn.disabled = false;
-      stopBtn.disabled = false;
-      playBtn.disabled = true;
-
-      function afterAllComplete() {
-        statusEl.textContent = 'Okuma tamamlandı.';
-        pauseBtn.disabled = true;
-        stopBtn.disabled = true;
-        playBtn.disabled = false;
-        isPaused = false;
-        pauseBtn.textContent = '⏸️ Duraklat';
-        // Otomatik sonraki
-        if (currentIndex < articles.length - 1) {
-          currentIndex++;
-          playArticle(currentIndex);
-        }
-      }
-
-      // sırayla okut
-      function speakNext(i) {
-        if (i >= parts.length) {
-          afterAllComplete();
-          return;
-        }
-        const seg = parts[i];
-        const u = new SpeechSynthesisUtterance(seg.text);
-
-        // Dil ve ses seçimi
-        let langNorm = (seg.lang || '').toLowerCase();
-        if (langNorm === 'en') langNorm = 'en-US'; // tarayıcı uyumu
-        if (langNorm === 'tr') langNorm = 'tr-TR';
-
-        u.lang = langNorm;
-
-        // TR/EN için tek cinsiyet tercihi
-        let v = null;
-        if (langNorm.startsWith('tr')) {
-          v = chosenTRVoice || selectedVoice;
-        } else if (langNorm.startsWith('en')) {
-          v = chosenENVoice || pickVoiceByLangAndGender('en', VOICE_GENDER) || selectedVoice;
-        }
-        if (v) u.voice = v;
-
-        u.rate = 0.9;
-        u.pitch = 1.0;
-        u.onend = () => speakNext(i + 1);
-        u.onerror = () => speakNext(i + 1);
-        speechSynthesis.speak(u);
-      }
-      speakNext(0);
-    }
-
-    // Eski speak fonksiyonunu bırakıyoruz ama playArticle artık speakWithLangTags çağıracak
-    function speak(text) {
-      if (!text) return;
-      if (utterance) {
-        synth.cancel();
-      }
-      utterance = new SpeechSynthesisUtterance(text);
-      if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.lang = 'tr-TR';
-      utterance.rate = 0.9;
-      utterance.pitch = 1.0;
-      utterance.onend = () => {
-        statusEl.textContent = 'Okuma tamamlandı.';
-        pauseBtn.disabled = true;
-        stopBtn.disabled = true;
-        playBtn.disabled = false;
-        isPaused = false;
-        pauseBtn.textContent = '⏸️ Duraklat';
-        if (currentIndex < articles.length - 1) {
-          currentIndex++;
-          playArticle(currentIndex);
-        }
-      };
-      utterance.onerror = (e) => {
-        console.error('SpeechSynthesis hata:', e);
-        statusEl.textContent = 'Sesli okuma sırasında hata meydana geldi.';
-      };
-      synth.speak(utterance);
-      statusEl.textContent = 'Okuma devam ediyor...';
-      pauseBtn.disabled = false;
-      stopBtn.disabled = false;
-      playBtn.disabled = true;
-    }
-
-    function playArticle(idx) {
-      if (idx < 0 || idx >= articles.length) return;
-      currentIndex = idx;
-      updateSelection();
-      // SADECE A sütununu (başlık) oku, E sütununu okuma
-      speakWithLangTags(articles[idx].title);
-    }
-
-    function pauseReading() {
-      if (synth.speaking && !isPaused) {
-        synth.pause();
-        isPaused = true;
-        statusEl.textContent = 'Okuma duraklatıldı.';
-        pauseBtn.textContent = '▶️ Devam Et';
-      } else if (synth.paused && isPaused) {
-        synth.resume();
-        isPaused = false;
-        statusEl.textContent = 'Okuma devam ediyor...';
-        pauseBtn.textContent = '⏸️ Duraklat';
-      }
-    }
-
-    function stopReading() {
-      if (synth.speaking) {
-        synth.cancel();
-        isPaused = false;
-        statusEl.textContent = 'Okuma durduruldu.';
-        pauseBtn.disabled = true;
-        stopBtn.disabled = true;
-        playBtn.disabled = false;
-        pauseBtn.textContent = '⏸️ Duraklat';
-      }
-    }
-
-    function playPrev() {
-      if (currentIndex > 0) {
-        playArticle(currentIndex - 1);
-      }
-    }
-
-    function playNext() {
+      pauseBtn.textContent = '⏸️ Duraklat';
       if (currentIndex < articles.length - 1) {
-        playArticle(currentIndex + 1);
+        currentIndex++;
+        playArticle(currentIndex);
       }
-    }
+    };
+    utterance.onerror = () => {
+      statusEl.textContent = 'Sesli okuma sırasında hata meydana geldi.';
+    };
+    synth.speak(utterance);
+    statusEl.textContent = 'Okuma devam ediyor...';
+    pauseBtn.disabled = false;
+    stopBtn.disabled = false;
+    playBtn.disabled = true;
+  }
 
-    playBtn.addEventListener('click', () => {
-      if (currentIndex === -1 && articles.length > 0) {
-        playArticle(0);
-      } else if (!synth.speaking) {
+  // Makale oynat: A (EN) + E (TR) – tabloya kod eklemeden
+  function playArticle(idx) {
+    if (idx < 0 || idx >= articles.length) return;
+    currentIndex = idx;
+    updateSelection();
+
+    const titleEN = articles[idx].title?.trim();  // A sütunu – İngilizce okut
+    const detailTR = articles[idx].detail?.trim(); // E sütunu – Türkçe okut
+
+    const seq = [];
+    if (titleEN) seq.push({ lang: 'en-US', text: titleEN });
+    if (detailTR) seq.push({ lang: 'tr-TR', text: detailTR });
+
+    if (seq.length === 0) return;
+
+    speakSequence(seq, () => {
+      statusEl.textContent = 'Okuma tamamlandı.';
+      pauseBtn.disabled = true;
+      stopBtn.disabled = true;
+      playBtn.disabled = false;
+      isPaused = false;
+      pauseBtn.textContent = '⏸️ Duraklat';
+
+      // Otomatik sonraki
+      if (currentIndex < articles.length - 1) {
+        currentIndex++;
         playArticle(currentIndex);
       }
     });
-    pauseBtn.addEventListener('click', pauseReading);
-    stopBtn.addEventListener('click', stopReading);
-    prevBtn.addEventListener('click', playPrev);
-    nextBtn.addEventListener('click', playNext);
+  }
 
-    fetchArticles();
-  </script>
-</body>
+  function pauseReading() {
+    if (synth.speaking && !isPaused) {
+      synth.pause();
+      isPaused = true;
+      statusEl.textContent = 'Okuma duraklatıldı.';
+      pauseBtn.textContent = '▶️ Devam Et';
+    } else if (synth.paused && isPaused) {
+      synth.resume();
+      isPaused = false;
+      statusEl.textContent = 'Okuma devam ediyor...';
+      pauseBtn.textContent = '⏸️ Duraklat';
+    }
+  }
 
-</html>
+  function stopReading() {
+    if (synth.speaking || synth.paused) {
+      synth.cancel();
+      isPaused = false;
+      statusEl.textContent = 'Okuma durduruldu.';
+      pauseBtn.disabled = true;
+      stopBtn.disabled = true;
+      playBtn.disabled = false;
+      pauseBtn.textContent = '⏸️ Duraklat';
+    }
+  }
+
+  function playPrev() {
+    if (currentIndex > 0) {
+      playArticle(currentIndex - 1);
+    }
+  }
+
+  function playNext() {
+    if (currentIndex < articles.length - 1) {
+      playArticle(currentIndex + 1);
+    }
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (currentIndex === -1 && articles.length > 0) {
+      playArticle(0);
+    } else if (!synth.speaking) {
+      playArticle(currentIndex);
+    }
+  });
+  pauseBtn.addEventListener('click', pauseReading);
+  stopBtn.addEventListener('click', stopReading);
+  prevBtn.addEventListener('click', playPrev);
+  nextBtn.addEventListener('click', playNext);
+
+  fetchArticles();
+</script>
