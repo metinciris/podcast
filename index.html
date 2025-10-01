@@ -235,7 +235,7 @@
     
     <!-- Büyük İçerik Paneli - E Sütunu Burada Gösterilecek -->
     <div class="content-panel" id="contentPanel">
-      Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.
+      Bir makale seçin veya oynat düğmesine basın.
     </div>
     
     <!-- Oynatıcı -->
@@ -258,7 +258,7 @@
     
     <!-- Makale Listesi -->
     <div class="articles-section">
-      <div class="articles-title">Makaleler (A Sütunu - Sesli Okunacak)</div>
+      <div class="articles-title">Makaleler</div>
       <ul id="articles"></ul>
     </div>
   </div>
@@ -363,7 +363,7 @@
         // A sütunu başlığını oynatıcıda göster
         currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${articles[currentIndex].title.substring(0, 50)}${articles[currentIndex].title.length > 50 ? '...' : ''}`;
       } else {
-        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.';
+        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği görünecektir.';
         currentTrackEl.textContent = 'Seçili makale yok';
       }
       prevBtn.disabled = currentIndex <= 0;
