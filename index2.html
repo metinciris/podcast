@@ -6,7 +6,226 @@
   <title>Günlük Değişen Podcast Makaleler - Prof. Dr. Metin Çiriş</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    /* Stil ayarları burada değişiklik yapılmadı */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      margin: 0;
+      padding: 0;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      font-size: 2.2em;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .content-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      margin-bottom: 25px;
+      border: 1px solid #e1e5e9;
+      min-height: 200px;
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .player-container {
+      position: sticky;
+      top: 0;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      margin-bottom: 25px;
+      z-index: 100;
+      border: 1px solid #e1e5e9;
+    }
+
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f1f3f4;
+    }
+
+    .player-title {
+      font-size: 1.4em;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    .current-track {
+      font-size: 0.9em;
+      color: #7f8c8d;
+      font-style: italic;
+    }
+
+    #playerControls {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 90px;
+      font-weight: 600;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      background: linear-gradient(135deg, #2980b9 0%, #2471a3 100%);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    #status {
+      text-align: center;
+      font-style: italic;
+      color: #7f8c8d;
+      min-height: 20px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 0.9em;
+    }
+
+    .articles-section {
+      margin-top: 20px;
+    }
+
+    .articles-title {
+      font-size: 1.3em;
+      color: #2c3e50;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #3498db;
+    }
+
+    #articles {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
+    }
+
+    #articles li {
+      background-color: white;
+      border-radius: 10px;
+      padding: 15px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      border-left: 4px solid transparent;
+      height: 100%;
+    }
+
+    #articles li:hover {
+      background-color: #f8f9fa;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-left: 4px solid #3498db;
+    }
+
+    #articles li.active {
+      background-color: #e3f2fd;
+      font-weight: bold;
+      border-left: 4px solid #e74c3c;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .article-title {
+      font-size: 14px;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+      
+      h1 {
+        font-size: 1.8em;
+      }
+      
+      .content-panel {
+        padding: 20px;
+        font-size: 16px;
+      }
+      
+      .player-container {
+        padding: 15px;
+      }
+      
+      button {
+        padding: 10px 15px;
+        font-size: 13px;
+        min-width: 80px;
+      }
+      
+      #playerControls {
+        gap: 5px;
+      }
+      
+      #articles {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .player-header {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+      }
+      
+      button {
+        padding: 8px 12px;
+        min-width: 70px;
+      }
+      
+      .content-panel {
+        padding: 15px;
+        font-size: 15px;
+      }
+    }
   </style>
 </head>
 
@@ -14,17 +233,18 @@
   <div class="container">
     <h1>Prof. Dr. Metin Çiriş - Podcast Makaleler</h1>
     
+    <!-- Büyük İçerik Paneli - E Sütunu Burada Gösterilecek -->
     <div class="content-panel" id="contentPanel">
-      Bir makale seçin veya oynat düğmesine basın.
+      Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.
     </div>
-
+    
     <!-- Oynatıcı -->
     <div class="player-container">
       <div class="player-header">
         <div class="player-title">Sesli Oynatıcı</div>
         <div class="current-track" id="currentTrack">Seçili makale yok</div>
       </div>
-
+      
       <div id="playerControls">
         <button id="prevBtn" disabled>⏮️ Önceki</button>
         <button id="playBtn" disabled>▶️ Oynat</button>
@@ -32,13 +252,13 @@
         <button id="stopBtn" disabled>⏹️ Durdur</button>
         <button id="nextBtn" disabled>⏭️ Sonraki</button>
       </div>
-
+      
       <div id="status">Bir makale seçin ve oynat'a basın</div>
     </div>
-
+    
     <!-- Makale Listesi -->
     <div class="articles-section">
-      <div class="articles-title">Makaleler </div>
+      <div class="articles-title">Makaleler (A Sütunu - Sesli Okunacak)</div>
       <ul id="articles"></ul>
     </div>
   </div>
@@ -49,7 +269,7 @@
 
     let articles = [];
     let currentIndex = -1;
-    let synth = window.speechSynthesis;
+    const synth = window.speechSynthesis;
     let utterance = null;
     let isPaused = false;
 
@@ -70,7 +290,7 @@
       voices = synth.getVoices();
       selectedVoice = voices.find(v =>
         v.lang === 'tr-TR' ||
-        v.lang.startsWith('tr') ||
+        (v.lang && v.lang.toLowerCase().startsWith('tr')) ||
         v.name.toLowerCase().includes('turkish') ||
         v.name.toLowerCase().includes('türk')
       );
@@ -78,13 +298,67 @@
         selectedVoice = voices[0];
       }
     }
-
     if (speechSynthesis.onvoiceschanged !== undefined) {
       speechSynthesis.onvoiceschanged = loadVoices;
     }
     loadVoices();
 
-    // Google Sheets'ten veri çekme
+    // ------- Yardımcılar -------
+    function pickVoiceByLang(langCode) {
+      const all = speechSynthesis.getVoices();
+      return all.find(v => v.lang === langCode)
+          || all.find(v => v.lang && v.lang.toLowerCase().startsWith(langCode.split('-')[0]))
+          || selectedVoice
+          || all[0]
+          || null;
+    }
+
+    function stripLangTags(s) {
+      return s.replace(/<lang\s+lang="[^"]*">/g, '').replace(/<\/lang>/g, '');
+    }
+
+    // <lang> bloklarını koruyup dış kısımlara otomatik etiket uygula
+    const AUTO_TAG = true; // kapatmak istersen false yap
+    const KNOWN_EN_TERMS = [
+      'Histopathology','The Lancet','Lancet','Nature','Science','Cell','NEJM','BMJ',
+      'JAMA','PLOS ONE','Annals of Internal Medicine','Radiology','Gastroenterology'
+    ];
+
+    function autoTagEnglish(raw) {
+      if (!AUTO_TAG) return raw;
+
+      // Mevcut <lang ...>...</lang> bloklarını koru
+      const tags = [];
+      let idx = 0;
+      let safe = raw.replace(/<lang\s+lang=".*?">.*?<\/lang>/g, (m) => {
+        const key = `__LANGTAG_${idx++}__`;
+        tags.push(m);
+        return key;
+      });
+
+      // Bilinen İngilizce terimleri işaretle (çakışmayı azaltmak için uzun adlar önce)
+      KNOWN_EN_TERMS.sort((a,b)=>b.length-a.length).forEach(term => {
+        const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rx = new RegExp(`(\\b)(${esc})(\\b)`, 'g');
+        safe = safe.replace(rx, `$1<lang lang="en">$2</lang>$3`);
+      });
+
+      // İçinde YANYANA EN AZ İKİ BÜYÜK HARF bulunan kelimeleri İngilizce say
+      // Örn: DNA, MRI, COVID-19, USA, mRNA -> (mRNA'da "RNA" kısmı tetikler)
+      safe = safe.replace(/\b([A-Za-z0-9\-+/&_.]*[A-Z]{2}[A-Za-z0-9\-+/&_.]*)\b/g, (m) => {
+        // Eğer zaten bir <lang> içine girmişse (placeholder değil), dokunma
+        if (m.startsWith('__LANGTAG_') && m.endsWith('__')) return m;
+        // Çift kapsama olmasın: zaten <lang> ile işaretlenmiş kısım restore aşamasında gelecek
+        return `<lang lang="en">${m}</lang>`;
+      });
+
+      // Placeholder'ları geri yükle
+      safe = safe.replace(/__LANGTAG_(\d+)__/g, (_, n) => tags[Number(n)]);
+
+      return safe;
+    }
+
+    // ------- Google Sheets'ten veri çekme -------
     async function fetchArticles() {
       const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&range=A1:E132`;
       try {
@@ -115,7 +389,7 @@
       articlesEl.innerHTML = '';
       articles.forEach((article, idx) => {
         const li = document.createElement('li');
-        li.innerHTML = `<div class="article-title">${article.title}</div>`;
+        li.innerHTML = `<div class="article-title">${stripLangTags(article.title)}</div>`;
         li.addEventListener('click', () => {
           playArticle(idx);
         });
@@ -137,61 +411,124 @@
       });
       if (currentIndex >= 0 && currentIndex < articles.length) {
         contentPanelEl.innerHTML = articles[currentIndex].detail || '<p style="color: #7f8c8d; font-style: italic;">Bu makale için detaylı içerik bulunmuyor.</p>';
-        currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${articles[currentIndex].title.substring(0, 50)}${articles[currentIndex].title.length > 50 ? '...' : ''}`;
+        const clean = stripLangTags(articles[currentIndex].title);
+        currentTrackEl.textContent = `${currentIndex + 1}/${articles.length}: ${clean.substring(0, 50)}${clean.length > 50 ? '...' : ''}`;
       } else {
-        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği görünecektir.';
+        contentPanelEl.textContent = 'Bir makale seçin veya oynat düğmesine basın. Burada makalenin detaylı içeriği (E sütunu) görünecektir.';
         currentTrackEl.textContent = 'Seçili makale yok';
       }
       prevBtn.disabled = currentIndex <= 0;
       nextBtn.disabled = currentIndex >= articles.length - 1;
     }
 
-    // Yeni fonksiyon: <lang lang="en">...</lang> etiketlerini doğru seslendirme
-    function speakWithLangTags(text) {
-      if (!text) return;
+    // ------- Çok dilli okuma (etiket + otomatik EN) -------
+    function speakWithLangTags(rawText) {
+      if (!rawText) return;
 
-      // Çalışan okutmayı iptal et
+      // Mevcut okuma varsa iptal
       synth.cancel();
 
-      // <lang lang="xx">...</lang> parçalarını yakala
+      // Otomatik İngilizce etiketleme uygula (varsa)
+      const text = autoTagEnglish(rawText);
+
+      // <lang> parçalarına böl
       const regex = /<lang\s+lang="(.*?)">(.*?)<\/lang>/g;
       let parts = [];
       let lastIndex = 0;
       let match;
 
       while ((match = regex.exec(text)) !== null) {
-        // Etiketten önceki normal Türkçe kısım
         if (match.index > lastIndex) {
           parts.push({ lang: 'tr-TR', text: text.substring(lastIndex, match.index) });
         }
-        // Etiket içindeki özel kısım
         parts.push({ lang: match[1], text: match[2] });
         lastIndex = regex.lastIndex;
       }
-      // Etiketlerden sonraki kalan kısım
       if (lastIndex < text.length) {
         parts.push({ lang: 'tr-TR', text: text.substring(lastIndex) });
       }
 
-      // Her parçayı sırayla okut
+      // Kontrolleri güncelle
+      statusEl.textContent = 'Okuma devam ediyor...';
+      pauseBtn.disabled = false;
+      stopBtn.disabled = false;
+      playBtn.disabled = true;
+      pauseBtn.textContent = '⏸️ Duraklat';
+      isPaused = false;
+
+      // Sırayla okut
       function speakNext(i) {
-        if (i >= parts.length) return;
-        const utter = new SpeechSynthesisUtterance(parts[i].text);
-        utter.lang = parts[i].lang;
-        utter.rate = 0.9;
-        utter.pitch = 1.0;
-        utter.onend = () => speakNext(i + 1);
-        synth.speak(utter);
+        if (i >= parts.length) {
+          // Tüm parçalar bitti
+          statusEl.textContent = 'Okuma tamamlandı.';
+          pauseBtn.disabled = true;
+          stopBtn.disabled = true;
+          playBtn.disabled = false;
+          isPaused = false;
+          pauseBtn.textContent = '⏸️ Duraklat';
+
+          // Otomatik sonraki makaleye geç
+          if (currentIndex < articles.length - 1) {
+            currentIndex++;
+            playArticle(currentIndex);
+          }
+          return;
+        }
+        const seg = parts[i];
+        const u = new SpeechSynthesisUtterance(seg.text);
+        u.lang = seg.lang || 'tr-TR';
+        const v = pickVoiceByLang(u.lang);
+        if (v) u.voice = v;
+        u.rate = 0.9;
+        u.pitch = 1.0;
+        u.onend = () => speakNext(i + 1);
+        u.onerror = () => speakNext(i + 1); // hatada da devam et
+        speechSynthesis.speak(u);
       }
 
       speakNext(0);
+    }
+
+    // ------- Orijinal speak (kalsın, diğer yerlerde ister kullan) -------
+    function speak(text) {
+      if (!text) return;
+      if (utterance) {
+        synth.cancel();
+      }
+      utterance = new SpeechSynthesisUtterance(text);
+      if (selectedVoice) utterance.voice = selectedVoice;
+      utterance.lang = 'tr-TR';
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.onend = () => {
+        statusEl.textContent = 'Okuma tamamlandı.';
+        pauseBtn.disabled = true;
+        stopBtn.disabled = true;
+        playBtn.disabled = false;
+        isPaused = false;
+        pauseBtn.textContent = '⏸️ Duraklat';
+        if (currentIndex < articles.length - 1) {
+          currentIndex++;
+          playArticle(currentIndex);
+        }
+      };
+      utterance.onerror = (e) => {
+        console.error('SpeechSynthesis hata:', e);
+        statusEl.textContent = 'Sesli okuma sırasında hata meydana geldi.';
+      };
+      synth.speak(utterance);
+      statusEl.textContent = 'Okuma devam ediyor...';
+      pauseBtn.disabled = false;
+      stopBtn.disabled = false;
+      playBtn.disabled = true;
     }
 
     function playArticle(idx) {
       if (idx < 0 || idx >= articles.length) return;
       currentIndex = idx;
       updateSelection();
-      speakWithLangTags(articles[idx].title);  // Yeni fonksiyonu çağırdık
+      // A sütunu başlığını çok dilli okuma ile okut
+      speakWithLangTags(articles[idx].title);
     }
 
     function pauseReading() {
