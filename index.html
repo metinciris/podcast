@@ -272,7 +272,7 @@ async function speak(text) {
   };
   utterance.onerror = e => {
     console.error("SpeechSynthesis hata:", e);
-    statusEl.innerHTML = "Sesli okuma hatası!";
+    statusEl.innerHTML = "Sesli okuma durdu!";
   };
   synth.speak(utterance);
   statusEl.innerHTML = "Okunuyor...";
