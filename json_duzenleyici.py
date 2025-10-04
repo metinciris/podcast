@@ -24,5 +24,6 @@
   "miRNA": "mirene a",
   "PI3K": "pi ay tiri kay",
   "IDH1": "i de aş bir",
-  "neoplazm": "neoplazi"
+  "neoplazm": "neoplazi",
+  "DICER1": "daysırvan"
 }
