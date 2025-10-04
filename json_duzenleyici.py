@@ -1,70 +1,86 @@
 import tkinter as tk
-from tkinter import messagebox, simpledialog
+from tkinter import messagebox, simpledialog, filedialog
 import json
 import os
 
-JSON_FILENAME = "customWords.json"
+DEFAULT_JSON = "customWords.json"
 
 class CustomWordsEditor(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Custom Words Editor")
-        self.geometry("500x400")
+        self.geometry("900x540")  # Büyük ekran
         self.resizable(False, False)
-        self.config(bg="#f8fafc")
-
+        self.config(bg="#ecf0f1")
+        self.json_filename = DEFAULT_JSON
         self.custom_words = {}
-        self.load_json_file()
         self.create_widgets()
-        self.update_word_list()
+        self.open_json_file(initial=True)
+
+    def create_widgets(self):
+        tk.Button(self, text="JSON Seç", font=("Arial", 18, "bold"), bg="#888", fg="white", command=self.change_json_file).place(x=30, y=20, width=180, height=48)
+        self.json_label = tk.Label(self, text="", font=("Arial", 16, "bold"), bg="#ecf0f1", anchor="w")
+        self.json_label.place(x=230, y=25, width=630, height=38)
+
+        # LIST
+        self.listbox = tk.Listbox(self, font=("Arial", 21), activestyle='none', selectbackground="#60a5fa")
+        self.listbox.place(x=30, y=90, width=500, height=400)
+        self.listbox.bind("<Double-1>", lambda e: self.edit_entry())
+
+        sb = tk.Scrollbar(self)
+        sb.place(x=530, y=90, height=400)
+        self.listbox.config(yscrollcommand=sb.set)
+        sb.config(command=self.listbox.yview)
+
+        # ENTRY fields
+        tk.Label(self, text="Kelime", font=("Arial", 16), bg="#ecf0f1").place(x=570, y=110)
+        self.word_entry = tk.Entry(self, font=("Arial", 21))
+        self.word_entry.place(x=570, y=145, width=300, height=42)
+        tk.Label(self, text="Okunuş", font=("Arial", 16), bg="#ecf0f1").place(x=570, y=210)
+        self.pron_entry = tk.Entry(self, font=("Arial", 21))
+        self.pron_entry.place(x=570, y=245, width=300, height=42)
+
+        # BUTTONS
+        tk.Button(self, text="Ekle", font=("Arial", 17, "bold"), bg="#38bdf8", fg="white", command=self.add_entry).place(x=570, y=320, width=90, height=48)
+        tk.Button(self, text="Düzenle", font=("Arial", 17, "bold"), bg="#38bdf8", fg="white", command=self.edit_entry).place(x=675, y=320, width=90, height=48)
+        tk.Button(self, text="Sil", font=("Arial", 17, "bold"), bg="#ef4444", fg="white", command=self.delete_entry).place(x=780, y=320, width=90, height=48)
+        tk.Button(self, text="Yenile", font=("Arial", 17, "bold"), bg="#a3e635", fg="black", command=self.refresh).place(x=570, y=400, width=300, height=48)
+        tk.Label(self, text="Çift tıkla: Düzenle", fg="#64748b", bg="#ecf0f1", font=("Arial", 14)).place(x=30, y=500)
+
+    def open_json_file(self, initial=False):
+        if initial:
+            filename = DEFAULT_JSON if os.path.exists(DEFAULT_JSON) else filedialog.askopenfilename(title="Bir JSON dosyası seçin", filetypes=[("JSON Dosyası", "*.json")])
+        else:
+            filename = filedialog.askopenfilename(title="Bir JSON dosyası seçin", filetypes=[("JSON Dosyası", "*.json")])
+            if not filename:
+                return
+        if filename:
+            self.json_filename = filename
+            self.json_label.config(text=self.json_filename)
+            self.load_json_file()
+            self.update_word_list()
+
+    def change_json_file(self):
+        self.open_json_file(initial=False)
 
     def load_json_file(self):
-        if not os.path.exists(JSON_FILENAME):
-            with open(JSON_FILENAME, "w") as f:
+        if not os.path.exists(self.json_filename):
+            with open(self.json_filename, "w") as f:
                 json.dump({}, f, ensure_ascii=False, indent=2)
-        with open(JSON_FILENAME, "r", encoding="utf-8") as f:
+        with open(self.json_filename, "r", encoding="utf-8") as f:
             try:
                 self.custom_words = json.load(f)
             except Exception:
                 self.custom_words = {}
 
     def save_json_file(self):
-        with open(JSON_FILENAME, "w", encoding="utf-8") as f:
+        with open(self.json_filename, "w", encoding="utf-8") as f:
             json.dump(self.custom_words, f, ensure_ascii=False, indent=2)
-
-    def create_widgets(self):
-        # LIST
-        self.listbox = tk.Listbox(self, font=("Arial", 13), activestyle='none', selectbackground="#60a5fa")
-        self.listbox.place(x=30, y=30, width=280, height=300)
-        self.listbox.bind("<Double-1>", lambda e: self.edit_entry())
-
-        # Scroll
-        sb = tk.Scrollbar(self)
-        sb.place(x=310, y=30, height=300)
-        self.listbox.config(yscrollcommand=sb.set)
-        sb.config(command=self.listbox.yview)
-
-        # Input fields
-        tk.Label(self, text="Kelime", font=("Arial", 11), bg="#f8fafc").place(x=340, y=50)
-        self.word_entry = tk.Entry(self, font=("Arial", 12))
-        self.word_entry.place(x=340, y=75, width=140)
-        tk.Label(self, text="Okunuş", font=("Arial", 11), bg="#f8fafc").place(x=340, y=110)
-        self.pron_entry = tk.Entry(self, font=("Arial", 12))
-        self.pron_entry.place(x=340, y=135, width=140)
-
-        # Buttons
-        tk.Button(self, text="Ekle", bg="#38bdf8", fg="white", font=("Arial", 11), command=self.add_entry).place(x=340, y=180, width=65)
-        tk.Button(self, text="Düzenle", bg="#38bdf8", fg="white", font=("Arial", 11), command=self.edit_entry).place(x=415, y=180, width=65)
-        tk.Button(self, text="Sil", bg="#ef4444", fg="white", font=("Arial", 11), command=self.delete_entry).place(x=340, y=230, width=63)
-        tk.Button(self, text="Yenile", bg="#a3e635", font=("Arial", 11), command=self.refresh).place(x=415, y=230, width=65)
-
-        # Info
-        tk.Label(self, text="Çift tıkla: Düzenle", fg="#64748b", bg="#f8fafc", font=("Arial", 9)).place(x=30, y=335)
 
     def update_word_list(self):
         self.listbox.delete(0, tk.END)
         for word, pron in self.custom_words.items():
-            self.listbox.insert(tk.END, f"{word} → {pron}")
+            self.listbox.insert(tk.END, f"{word}  →  {pron}")
 
     def add_entry(self):
         word = self.word_entry.get().strip()
@@ -86,10 +102,10 @@ class CustomWordsEditor(tk.Tk):
         selected = self.listbox.get(selection[0])
         word = selected.split("→")[0].strip()
         pron = self.custom_words[word]
-        new_word = simpledialog.askstring("Kelimeyi Düzenle", "Kelime:", initialvalue=word)
+        new_word = simpledialog.askstring("Kelimeyi Düzenle", "Kelime:", initialvalue=word, parent=self)
         if not new_word:
             return
-        new_pron = simpledialog.askstring("Okunuşu Düzenle", "Okunuş:", initialvalue=pron)
+        new_pron = simpledialog.askstring("Okunuşu Düzenle", "Okunuş:", initialvalue=pron, parent=self)
         if not new_pron:
             return
         del self.custom_words[word]
