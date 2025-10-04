@@ -11,32 +11,52 @@ header { text-align: center; margin-bottom: 30px; padding: 25px 20px; background
 h1 { font-size: 2.5em; font-weight: 800; color: #2c3e50; margin-bottom: 8px; }
 .subtitle { font-size: 1em; color: #7f8c8d; font-weight: 400; }
 .date-badge { display: inline-block; margin-top: 10px; padding: 6px 16px; background: linear-gradient(135deg, #3498db 0, #2980b9 100); color: white; border-radius: 20px; font-size: 0.9em; font-weight: 600; }
-.player-container { position: sticky; top: 20px; background: white; border-radius: 16px; padding: 24px 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; z-index:100; border: 1px solid #e1e8ed; display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex-wrap: wrap; }
+.player-container { position: sticky; top: 20px; background: white; border-radius: 16px; padding: 24px 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 30px; z-index:100; border: 1px solid #e1e8ed; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 20px; flex-wrap: wrap; }
 .player-controls { display: flex; gap: 12px; align-items: center; }
-.player-controls button {
-  background: linear-gradient(135deg, #3498db 0, #2980b9 100);
+#playBtn {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
   color: white;
   border: none;
   border-radius: 10px;
-  padding: 12px 20px;
-  font-size: 14px;
+  padding: 12px 32px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 100px;
-  font-weight: 600;
-  box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
+  min-width: 105px;
+  box-shadow: 0 3px 10px rgba(52,152,219,0.22);
+  transition: all 0.22s cubic-bezier(.4,1.3,.6,1);
+  outline: none;
 }
-.player-controls button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+#playBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #62a9fa 0%, #0072ff 100%);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 7px 20px rgba(52,152,219,0.38);
 }
-.player-controls button:active:not(:disabled) {
-  transform: translateY(0);
+#stopBtn {
+  background: linear-gradient(135deg, #fb7185 0%, #fca5a5 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 32px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 105px;
+  box-shadow: 0 3px 10px rgba(251,113,133,0.18);
+  transition: all 0.22s cubic-bezier(.4,1.3,.6,1);
+  outline: none;
+}
+#stopBtn:hover:not(:disabled) {
+  background: linear-gradient(125deg, #fd3152 0%, #fd8ba8 100%);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 7px 20px rgba(251,113,133,0.26);
 }
 .player-controls button:disabled {
   background: #bdc3c7;
   cursor: not-allowed;
-  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.55;
 }
 .articles-section { margin-top: 30px; }
 .journal-group { margin-bottom: 40px; }
@@ -63,11 +83,11 @@ footer p { margin-bottom: 10px; }
     <div class="date-badge" id="currentDate"></div>
   </header>
   <div class="player-container">
-    <div id="status" style="margin-right:18px;font-size:1.07em;letter-spacing:0.01em;"></div>
     <div class="player-controls">
       <button id="playBtn" disabled>Oynat</button>
       <button id="stopBtn" disabled>Durdur</button>
     </div>
+    <div id="status"></div>
   </div>
   <div class="articles-section" id="articlesSection"></div>
   <footer>
@@ -79,7 +99,7 @@ footer p { margin-bottom: 10px; }
   </footer>
 </div>
 <script>
-const SHEETID = atob("MTQ4cDNNNDFSNThnVlZqdExTRjJRaDhySnZCUkVXSlNWNGxnU0JRWXdMYw==");
+const SHEETID = atob("MTQ4cDNNNDFSNThnVlZqdExTRjJRaDhySnZCUkVXSlNWNGxnU0JRWXdMYw=="); // base64 ile
 const GID = "1109640564";
 let articles = [];
 let journalGroups = [];
